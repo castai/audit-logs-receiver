@@ -12,6 +12,3 @@ run-local-docker:
 	docker run -v ./cmd/otelcollector-castai/config.yaml:/etc/otel/config.yaml otelcollector-castai:latest
 
 build-local-docker: build-collector push-local-docker
-
-
-

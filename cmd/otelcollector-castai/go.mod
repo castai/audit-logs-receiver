@@ -6,8 +6,8 @@ go 1.19
 
 require (
 	github.com/castai/otelreceiver v0.0.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.79.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.79.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.80.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.80.0
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/collector v0.80.0
 	go.opentelemetry.io/collector/component v0.80.0
@@ -55,12 +55,12 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.79.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter v0.79.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.79.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.79.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/loki v0.79.0 // indirect
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.79.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal v0.80.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/internal/filter v0.80.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl v0.80.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.80.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/loki v0.80.0 // indirect
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.80.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect

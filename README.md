@@ -14,6 +14,20 @@ Custom OpenTelemetry Collector Receiver for collecting CAST AI Audit Logs
 make build-collector
 ```
 
+
+## Update custom Collector
+Install [OpenTelemetry Collector Builder](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/builder):
+```
+go install go.opentelemetry.io/collector/cmd/builder@latest
+```
+Update configuration file  ```comd/otelcollector-castai/builder-config.yaml```.
+
+Run the following command to generate the golang source code and get modules:
+
+```
+make update-collector
+```
+
 ### Run locally with docker
 ```
 make run-local-docker

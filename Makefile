@@ -1,3 +1,6 @@
+update-collector:
+	builder --skip-compilation --config cmd/otelcollector-castai/builder-config.yaml --output-path cmd/otelcollector-castai
+
 build-collector:
 	GOOS=linux go build -ldflags "-s -w" -o  bin/otelcollector-castai ./cmd/otelcollector-castai
 	

@@ -1,14 +1,21 @@
-update-collector:
-	builder --skip-compilation --config cmd/otelcollector-castai/builder-config.yaml --output-path cmd/otelcollector-castai
+.PHONY: collector - Generate and build collector
+collector: metadata
+	builder --config builder-config.yaml --output-path otelcollector
 
-build-collector:
-	GOOS=linux go build -ldflags "-s -w" -o  bin/otelcollector-castai ./cmd/otelcollector-castai
-	
-push-local-docker:
-	cp ./bin/otelcollector-castai ./cmd/otelcollector-castai
+.PHONY: docker - Push image to local docker registry 
+docker:
+	GOOS=linux GOARCH=amd64 builder --config builder-config.yaml --output-path otelcollector-docker
 	docker build -t otelcollector-castai .
 
-run-local-docker:
-	docker run -v ./cmd/otelcollector-castai/config.yaml:/etc/otel/config.yaml otelcollector-castai:latest
+.PHONY: run-docker - Launch local docker image
+run-docker: docker
+	docker run -v ./collector-config.yaml:/etc/otel/config.yaml otelcollector-castai:latest
 
-build-local-docker: build-collector push-local-docker
+.PHONY: setup - Set up used tools
+setup: 
+	go install go.opentelemetry.io/collector/cmd/builder@latest
+	go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/mdatagen@latest
+
+.PHONY: metadata - Set up receiver's metadata
+metadata: 
+	cd receiver && mdatagen metadata.yaml

@@ -3,7 +3,6 @@ package auditlogs
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -18,11 +17,11 @@ func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
 		metadata.Type,
 		newDefaultConfig,
-		receiver.WithLogs(CreateTcpStatsReceiver, component.StabilityLevelDevelopment),
+		receiver.WithLogs(CreateAuditLogsReceiver, component.StabilityLevelDevelopment),
 	)
 }
 
-func CreateTcpStatsReceiver(
+func CreateAuditLogsReceiver(
 	_ context.Context,
 	settings receiver.CreateSettings,
 	cc component.Config,
@@ -33,22 +32,7 @@ func CreateTcpStatsReceiver(
 		return nil, errInvalidConfig
 	}
 
-	fmt.Printf("--> HERE 1.1 %v\n", cfg)
+	rcv := newAuditLogsReceiver(cfg, settings.Logger, consumer)
 
-	return &auditLogsReceiver{}, nil
-}
-
-type auditLogsReceiver struct {
-}
-
-func (a *auditLogsReceiver) Start(ctx context.Context, host component.Host) error {
-	fmt.Printf("--> HERE 1.2\n")
-
-	return nil
-}
-
-func (a *auditLogsReceiver) Shutdown(ctx context.Context) error {
-	fmt.Printf("--> HERE 1.3\n")
-
-	return nil
+	return rcv, nil
 }

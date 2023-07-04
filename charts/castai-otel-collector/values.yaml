@@ -1,0 +1,128 @@
+# Default values for castai-otel-collector.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  # If you want to use the core image `otel/opentelemetry-collector`, you also need to change `command.name` value to `otelcol`.
+  repository: otel/opentelemetry-collector-contrib
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+  # When digest is set to a non-empty value, images will be pulled by digest (regardless of tag value).
+  digest: ""
+
+replicaCount: 1
+
+# annotations to add to all resources
+commonAnnotations: {}
+
+# additionalSecretEnv: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+imagePullSecrets: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Token to be used for authorizing agent access to the API
+apiKey: "API_KEY"
+
+# Name of secret with Token to be used for authorizing agent access to the API
+# apiKey and apiKeySecretRef are mutually exclusive
+# The referenced secret must provide the token in .data["API_KEY"]
+# apiKeySecretRef: ""
+
+# Specifies whether a namespace should be created
+createNamespace: true
+
+rollout:
+  rollingUpdate: {}
+  # When 'mode: daemonset', maxSurge cannot be used when hostPort is set for any of the ports
+  # maxSurge: 25%
+  # maxUnavailable: 0
+  strategy: RollingUpdate
+
+configMap:
+  # Specifies whether a configMap should be created (true by default)
+  create: true
+
+# Host networking requested for this pod. Use the host's network namespace.
+hostNetwork: false
+
+config:
+  receivers:
+    filelog:
+      include:
+        - "/var/log/pods/*/*/*.log"
+
+  exporters:
+    loki:
+      endpoint: http://loki.loki.svc.cluster.local:3100/loki/api/v1/push
+
+  extensions:
+    # The health_check extension is mandatory for this chart.
+    # Without the health_check extension the collector will fail the readiness and liveliness probes.
+    # The health_check extension can be modified, but should never be removed.
+    health_check: {}
+
+  processors:
+    attributes:
+      actions:
+        - action: insert
+          key: loki.attribute.labels
+          value: log.file.name
+
+    service:
+      extensions:
+      - health_check
+      pipelines:
+        logs:
+          receivers:
+          - filelog
+          processors:
+          - attributes
+          exporters:
+          - loki

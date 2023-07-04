@@ -19,4 +19,5 @@ bin
 go.work.sum
 
 .idea
+collector-console
 otelcollector

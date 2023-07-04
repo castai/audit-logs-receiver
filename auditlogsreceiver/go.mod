@@ -1,10 +1,9 @@
-module github.com/castai/otelcol-receiver
+module github.com/castai/otel-receivers/audit-logs
 
-go 1.19
+go 1.20
 
 require (
 	go.opentelemetry.io/collector/component v0.80.0
-	go.opentelemetry.io/collector/consumer v0.80.0
 	go.opentelemetry.io/collector/receiver v0.80.0
 )
 
@@ -20,6 +19,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	go.opentelemetry.io/collector/config/configtelemetry v0.80.0 // indirect
 	go.opentelemetry.io/collector/confmap v0.80.0 // indirect
+	go.opentelemetry.io/collector/consumer v0.80.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.0.0-rcv0013 // indirect
 	go.opentelemetry.io/collector/pdata v1.0.0-rcv0013 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect

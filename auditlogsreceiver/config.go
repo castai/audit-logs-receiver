@@ -1,19 +1,15 @@
-package otelcolreceiver
+package auditlogs
 
-import "errors"
-
-type Config struct {
-	Token string `mapstructure:"token"`
-}
-
-var (
-	errNoToken = errors.New("no CAST AI token was specified")
+import (
+	"go.opentelemetry.io/collector/component"
 )
 
-func (c *Config) Validate() error {
-	if c.Token == "" {
-		return errNoToken
-	}
+// Config defines the configuration for the TCP stats receiver.
+type Config struct {
+	Url   string `mapstructure:"castai_api_url"`
+	Token string `mapstructure:"castai_api_token"`
+}
 
-	return nil
+func newDefaultConfig() component.Config {
+	return &Config{}
 }

@@ -1,0 +1,20 @@
+receivers:
+  castai-audit-logs:
+    castai_api_url: "CASTAI_API_URL"
+    castai_api_token: "CASTAI_API_TOKEN"
+
+exporters:
+  file:
+    path: ./fileexporter_kuku
+    rotation:
+      max_megabytes: 2
+      max_backups: 10
+
+processors:
+
+service:
+  pipelines:
+    logs:
+      receivers: [castai-audit-logs]
+      processors: []
+      exporters: [file]

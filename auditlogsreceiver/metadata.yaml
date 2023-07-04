@@ -1,4 +1,4 @@
-type: otelcolreceiver
+type: castai-audit-logs
 
 status:
   class: receiver

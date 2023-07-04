@@ -4,15 +4,11 @@ dist:
   output_path: ./otelcollector-castai
   otelcol_version: 0.80.0
 
-# receivers:
-#   - gomod: "github.com/castai/otelreceiver v0.0.0"
-
 receivers:
   - gomod: github.com/castai/otelcol-receiver v0.80.0
     import: github.com/castai/otelcol-receiver
     name: "otelcolreceiver"
-    path: "./receiver"
-
+    path: "./auditlogsreceiver"
 
 processors:
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.80.0"

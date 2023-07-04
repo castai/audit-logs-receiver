@@ -1,5 +1,5 @@
 .PHONY: collector - Generate and build collector
-collector: metadata
+collector: audit-logs-metadata
 	builder --config builder-config.yaml --output-path otelcollector
 
 .PHONY: docker - Push image to local docker registry 
@@ -16,6 +16,6 @@ setup:
 	go install go.opentelemetry.io/collector/cmd/builder@latest
 	go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/mdatagen@latest
 
-.PHONY: metadata - Set up receiver's metadata
-metadata: 
-	cd receiver && mdatagen metadata.yaml
+.PHONY: audit-logs-metadata - Generating Audit Logs receiver's metadata
+audit-logs-metadata:
+	cd auditlogsreceiver && mdatagen metadata.yaml

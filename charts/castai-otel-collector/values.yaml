@@ -126,3 +126,11 @@ config:
           - attributes
           exporters:
           - loki
+
+## Persist collector state to a persistent volume
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  annotations: {}

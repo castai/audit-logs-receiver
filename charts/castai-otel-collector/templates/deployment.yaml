@@ -64,6 +64,10 @@ spec:
             - mountPath: /conf
               name: {{ include "castai-otel-collector.lowercase_chartname" . }}-configmap
             {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - mountPath: /var/lib/otelcol/file_storage
+              name: {{ include "castai-otel-collector.lowercase_chartname" . }}-statestorage
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /
@@ -82,5 +86,10 @@ spec:
             items:
               - key: relay
                 path: relay.yaml
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: {{ include "castai-otel-collector.lowercase_chartname" . }}-statestorage
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "castai-otel-collector.fullname" .) }}
         {{- end }}
       hostNetwork: {{ .Values.hostNetwork }}

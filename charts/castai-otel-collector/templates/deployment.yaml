@@ -82,5 +82,12 @@ spec:
             items:
               - key: relay
                 path: relay.yaml
-        {{- end }}
+        - name: {{ include "castai-otel-collector.lowercase_chartname" . }}-statestorage
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "castai-otel-collector.fullname" .) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end -}}
+          {{- end }}
       hostNetwork: {{ .Values.hostNetwork }}

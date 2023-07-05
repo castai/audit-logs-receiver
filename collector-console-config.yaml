@@ -6,10 +6,8 @@ receivers:
 
 exporters:
   file:
-    path: ./fileexporter_kuku
-    rotation:
-      max_megabytes: 2
-      max_backups: 10
+    path:           ./audit_logs.log
+    flush_interval: 100ms
 
 processors:
 

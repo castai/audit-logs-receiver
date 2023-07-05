@@ -18,6 +18,8 @@ bin
 # Go workspace file
 go.work.sum
 
+*.log
+*.json
 .idea
 collector-console
 otelcollector

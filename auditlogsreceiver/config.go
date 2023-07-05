@@ -14,12 +14,14 @@ type Config struct {
 
 func newDefaultConfig() component.Config {
 	return &Config{
-		Url:             "https://api.cast.ai/",
+		Url:             "https://api.cast.ai",
 		PollIntervalSec: 10,
 	}
 }
 
 func (c Config) Validate() error {
+	// TODO: Validate URL and trim last '/' if present
+
 	if c.Token == "" {
 		return errors.New("api token cannot be empty")
 	}

@@ -393,17 +393,3 @@ This guide should have given you a comprehensive understanding of creating a cus
 The TcpStats Receiver serves as a valuable starting point for further exploration and development of custom receivers and integrations within the OpenTelemetry ecosystem.
 
 Happy coding and metrics collecting with the TcpStats Receiver!
-
-# References
-
-The development of the TcpStats Receiver and this guide involved referencing several resources:
-
-1. [OpenTelemetry Collector Documentation](https://opentelemetry.io/docs/collector/): The official documentation for the OpenTelemetry Collector, a valuable source of information on the architecture, concepts, and usage of the Collector.
-
-2. [OpenTelemetry Collector GitHub Repository](https://github.com/open-telemetry/opentelemetry-collector): The OpenTelemetry Collector's GitHub repository, which contains source code and examples that were referred to during the TcpStats Receiver's implementation.
-
-3. [Go Documentation](https://golang.org/doc/): The official documentation for the Go programming language, used to understand Go language constructs and standard library packages.
-
-4. [Zap Logger Documentation](https://pkg.go.dev/go.uber.org/zap): The documentation for the Zap logger, a prominent logging library for Go, was utilized to comprehend its usage and capabilities.
-
-Please be aware that the above references may be updated or changed, so always refer to the official documentation and resources for the most recent information.

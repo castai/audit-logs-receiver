@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "castai-otel-collector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "castai-otel-collector.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "castai-otel-collector.selectorLabels" . | nindent 6 }}
+  strategy:
+    {{- if eq .Values.rollout.strategy "RollingUpdate" }}
+    {{- with .Values.rollout.rollingUpdate }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
+    type: {{ .Values.rollout.strategy }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "castai-otel-collector.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "castai-otel-collector.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+          volumeMounts:
+            {{- if .Values.configMap.create }}
+            - mountPath: /conf
+              name: {{ include "castai-otel-collector.lowercase_chartname" . }}-configmap
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.configMap.create }}
+        - name: {{ include "castai-otel-collector.lowercase_chartname" . }}-configmap
+          configMap:
+            name: {{ include "castai-otel-collector.fullname" . }}{{ .configmapSuffix }}
+            items:
+              - key: relay
+                path: relay.yaml
+        {{- end }}
+      hostNetwork: {{ .Values.hostNetwork }}

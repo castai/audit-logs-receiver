@@ -100,7 +100,7 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 	var m map[string]interface{}
 	err = json.Unmarshal(resp.Body(), &m)
 	if err != nil {
-		a.logger.Error("--> HERE 1.2 ", zap.Error(err))
+		return fmt.Errorf("unexpected body in response: %v", resp.Body())
 	}
 
 	logs, err := a.processAuditLogs(m)

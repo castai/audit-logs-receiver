@@ -150,6 +150,7 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 			"eventType":   item["eventType"],
 			"initiatedBy": item["initiatedBy"],
 			"labels":      item["labels"],
+			"event":       item["event"],
 		}
 
 		resourceLog := logs.ResourceLogs().AppendEmpty()
@@ -159,8 +160,8 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 			return logs, err
 		}
 
-		layout := "2006-01-02T15:04:05.000000Z"
 		str := item["time"].(string)
+		layout := "2006-01-02T15:04:05.999999Z"
 		t, err := time.Parse(layout, str)
 		if err != nil {
 			a.logger.Error("--> HERE 1.2 ", zap.Error(err))
@@ -168,11 +169,6 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 
 		logRecord.SetObservedTimestamp(observedTime)
 		logRecord.SetTimestamp(pcommon.NewTimestampFromTime(t))
-
-		err = logRecord.Body().FromRaw(item["event"])
-		if err != nil {
-			a.logger.Error("--> HERE 1.2 ", zap.Error(err))
-		}
 	}
 
 	return logs, nil

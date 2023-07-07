@@ -41,16 +41,6 @@ securityContext: {}
   # runAsUser: 1000
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
 
 autoscaling:
   enabled: false
@@ -67,13 +57,16 @@ tolerations: []
 
 affinity: {}
 
+# URL to the API server
+apiURL: "https://api.cast.ai"
+
 # Token to be used for authorizing agent access to the API
 apiKey: "API_KEY"
 
 # Name of secret with Token to be used for authorizing agent access to the API
 # apiKey and apiKeySecretRef are mutually exclusive
 # The referenced secret must provide the token in .data["API_KEY"]
-# apiKeySecretRef: ""
+apiKeySecretRef: ""
 
 # Specifies whether a namespace should be created
 createNamespace: true
@@ -99,21 +92,16 @@ config:
         - "/var/log/pods/*/*/*.log"
 
   exporters:
-    loki:
-      endpoint: http://loki.loki.svc.cluster.local:3100/loki/api/v1/push
+      logging:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 200
 
   extensions:
     # The health_check extension is mandatory for this chart.
     # Without the health_check extension the collector will fail the readiness and liveliness probes.
     # The health_check extension can be modified, but should never be removed.
     health_check: {}
-
-  processors:
-    attributes:
-      actions:
-        - action: insert
-          key: loki.attribute.labels
-          value: log.file.name
 
     service:
       extensions:
@@ -125,7 +113,7 @@ config:
           processors:
           - attributes
           exporters:
-          - loki
+          - logging
 
 ## Persist collector state to a persistent volume
 persistence:
@@ -134,3 +122,6 @@ persistence:
   accessMode: ReadWriteOnce
   size: 1Gi
   annotations: {}
+
+statefulset:
+  podManagementPolicy: "Parallel"

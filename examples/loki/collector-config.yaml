@@ -1,6 +1,8 @@
 receivers:
-  otelcolreceiver:
-    token: test
+  castai-audit-logs:
+    castai_api_url:           ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
+    castai_api_token:         ${env:CASTAI_API_TOKEN} # Use CASTAI_API_TOKEN env variable to provide token
+    castai_poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
 
 exporters:
   loki:
@@ -16,6 +18,6 @@ processors:
 service:
   pipelines:
     logs:
-      receivers: [otelcolreceiver]
+      receivers: [castai-audit-logs]
       processors: [attributes]
       exporters: [loki]

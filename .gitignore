@@ -21,5 +21,4 @@ go.work.sum
 *.log
 *.json
 .idea
-collector-console
-otelcollector
+collector-*/

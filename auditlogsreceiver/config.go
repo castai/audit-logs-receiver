@@ -30,7 +30,5 @@ func (c Config) Validate() error {
 		return errors.New("poll interval must be positive number")
 	}
 
-	// TODO: implement API ping to validate URL & Token
-
 	return nil
 }

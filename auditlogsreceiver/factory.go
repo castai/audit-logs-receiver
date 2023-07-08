@@ -3,7 +3,11 @@ package auditlogs
 import (
 	"context"
 	"errors"
+	"github.com/castai/otel-receivers/audit-logs/storage"
+	"sync"
+	"time"
 
+	"github.com/go-resty/resty/v2"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
@@ -32,7 +36,23 @@ func CreateAuditLogsReceiver(
 		return nil, errInvalidConfig
 	}
 
-	rcv := newAuditLogsReceiver(cfg, settings.Logger, consumer)
+	rest := resty.New()
+	rest.SetBaseURL(cfg.Url + "/v1/audit")
+	rest.SetHeader("X-API-Key", cfg.Token)
+	rest.SetHeader("Content-Type", "application/json")
+	rest.SetRetryCount(1)
+	rest.SetTimeout(time.Second * 10)
 
-	return rcv, nil
+	// TODO: implement API ping to validate URL & Token
+
+	return &auditLogsReceiver{
+		logger:        settings.Logger,
+		pollInterval:  time.Second * time.Duration(cfg.PollIntervalSec),
+		nextStartTime: time.Now().Add(time.Duration(cfg.PollIntervalSec)),
+		wg:            &sync.WaitGroup{},
+		doneChan:      make(chan bool),
+		store:         storage.NewSampleStore(),
+		rest:          rest,
+		consumer:      consumer,
+	}, nil
 }

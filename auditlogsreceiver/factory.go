@@ -43,8 +43,8 @@ func CreateAuditLogsReceiver(
 	rest.SetRetryCount(1)
 	rest.SetTimeout(time.Second * 10)
 
-	// TODO: WIP handle initial fromDate
-	fromDate := time.Now().Add(-1 * time.Hour * 8 * 356)
+	// TODO: introduce possibility to use Persistent Store based on configuration.
+	store := storage.NewEphemeralStore(time.Now().Add(-1 * time.Duration(cfg.PollIntervalSec) * time.Second))
 
 	return &auditLogsReceiver{
 		logger:        settings.Logger,
@@ -52,7 +52,7 @@ func CreateAuditLogsReceiver(
 		nextStartTime: time.Now().Add(time.Duration(cfg.PollIntervalSec)),
 		wg:            &sync.WaitGroup{},
 		doneChan:      make(chan bool),
-		store:         storage.NewEphemeralStore(fromDate),
+		store:         store,
 		rest:          rest,
 		consumer:      consumer,
 	}, nil

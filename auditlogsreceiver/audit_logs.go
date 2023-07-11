@@ -19,12 +19,13 @@ import (
 )
 
 const (
-	layout = "2006-01-02T15:04:05.999999Z"
+	timestampLayout = "2006-01-02T15:04:05.999999Z"
 )
 
 type auditLogsReceiver struct {
 	logger        *zap.Logger
 	pollInterval  time.Duration
+	pageLimit     int
 	nextStartTime time.Time
 	wg            *sync.WaitGroup
 	doneChan      chan bool
@@ -34,8 +35,6 @@ type auditLogsReceiver struct {
 }
 
 func (a *auditLogsReceiver) Start(ctx context.Context, _ component.Host) error {
-	fmt.Printf("--> HERE 1.1\n")
-
 	a.logger.Debug("starting audit logs receiver")
 	a.wg.Add(1)
 	go a.startPolling(ctx)
@@ -44,8 +43,6 @@ func (a *auditLogsReceiver) Start(ctx context.Context, _ component.Host) error {
 }
 
 func (a *auditLogsReceiver) Shutdown(_ context.Context) error {
-	fmt.Printf("--> HERE 1.2\n")
-
 	a.logger.Debug("shutting down audit logs receiver")
 	close(a.doneChan)
 	a.wg.Wait()
@@ -77,15 +74,6 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 }
 
 func (a *auditLogsReceiver) poll(ctx context.Context) error {
-	// TODO: use config and following code from kubecast
-	//if f.Limit == 0 {
-	//	f.Limit = DefaultLimit (100)
-	//}
-	//if f.Limit > MaxLimit (1000) {
-	//	f.Limit = MaxLimit
-	//}
-	pageLimit := 10
-
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
 	fromDate := a.store.GetFromDate()
 	toDate := time.Now()
@@ -94,9 +82,9 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 	for true {
 		if queryParams == nil {
 			queryParams = map[string]string{
-				"page.limit": strconv.Itoa(pageLimit),
-				"fromDate":   fromDate.Format(layout),
-				"toDate":     toDate.Format(layout),
+				"page.limit": strconv.Itoa(a.pageLimit),
+				"fromDate":   fromDate.Format(timestampLayout),
+				"toDate":     toDate.Format(timestampLayout),
 			}
 		}
 
@@ -129,7 +117,7 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 		}
 
 		queryParams = map[string]string{
-			"page.limit": strconv.Itoa(pageLimit),
+			"page.limit": strconv.Itoa(a.pageLimit),
 			"cursor":     cursor,
 		}
 	}
@@ -210,7 +198,7 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 		}
 
 		var auditLogTimestamp time.Time
-		auditLogTimestamp, err = time.Parse(layout, str)
+		auditLogTimestamp, err = time.Parse(timestampLayout, str)
 		if err != nil {
 			a.logger.Warn("item's time was not recognized, skipping", zap.Any("time", str), zap.Error(err))
 			continue

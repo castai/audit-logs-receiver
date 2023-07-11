@@ -49,6 +49,7 @@ func CreateAuditLogsReceiver(
 	return &auditLogsReceiver{
 		logger:        settings.Logger,
 		pollInterval:  time.Second * time.Duration(cfg.PollIntervalSec),
+		pageLimit:     cfg.PageLimit,
 		nextStartTime: time.Now().Add(time.Duration(cfg.PollIntervalSec)),
 		wg:            &sync.WaitGroup{},
 		doneChan:      make(chan bool),

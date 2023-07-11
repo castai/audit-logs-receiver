@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -21,13 +20,9 @@ func NewEphemeralStore(fromDate time.Time) Store {
 }
 
 func (s *ephemeralStore) GetFromDate() time.Time {
-	fmt.Printf("--> HERE 4.1 %v\n", s.fromDate)
-
 	return s.fromDate
 }
 
 func (s *ephemeralStore) PutFromDate(fromDate time.Time) {
-	fmt.Printf("--> HERE 4.2 %v\n", fromDate)
-
 	s.fromDate = fromDate
 }

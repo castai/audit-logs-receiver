@@ -77,6 +77,15 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 }
 
 func (a *auditLogsReceiver) poll(ctx context.Context) error {
+	// TODO: use config and following code from kubecast
+	//if f.Limit == 0 {
+	//	f.Limit = DefaultLimit (100)
+	//}
+	//if f.Limit > MaxLimit (1000) {
+	//	f.Limit = MaxLimit
+	//}
+	pageLimit := 10
+
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
 	fromDate := a.store.GetFromDate()
 	toDate := time.Now()
@@ -84,15 +93,6 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 	var queryParams map[string]string
 	for true {
 		if queryParams == nil {
-			// TODO: use config and following code from kubecast
-			//if f.Limit == 0 {
-			//	f.Limit = DefaultLimit (100)
-			//}
-			//if f.Limit > MaxLimit (1000) {
-			//	f.Limit = MaxLimit
-			//}
-			pageLimit := 10
-
 			queryParams = map[string]string{
 				"page.limit": strconv.Itoa(pageLimit),
 				"fromDate":   fromDate.Format(layout),
@@ -127,15 +127,6 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 			a.logger.Warn("empty cursor is returned, skipping")
 			break
 		}
-
-		// TODO: use config and following code from kubecast
-		//if f.Limit == 0 {
-		//	f.Limit = DefaultLimit (100)
-		//}
-		//if f.Limit > MaxLimit (1000) {
-		//	f.Limit = MaxLimit
-		//}
-		pageLimit := 10
 
 		queryParams = map[string]string{
 			"page.limit": strconv.Itoa(pageLimit),

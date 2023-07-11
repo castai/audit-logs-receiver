@@ -43,7 +43,8 @@ func CreateAuditLogsReceiver(
 	rest.SetRetryCount(1)
 	rest.SetTimeout(time.Second * 10)
 
-	// TODO: implement API ping to validate URL & Token
+	// TODO: WIP handle initial fromDate
+	fromDate := time.Now().Add(-1 * time.Hour * 8 * 356)
 
 	return &auditLogsReceiver{
 		logger:        settings.Logger,
@@ -51,7 +52,7 @@ func CreateAuditLogsReceiver(
 		nextStartTime: time.Now().Add(time.Duration(cfg.PollIntervalSec)),
 		wg:            &sync.WaitGroup{},
 		doneChan:      make(chan bool),
-		store:         storage.NewSampleStore(),
+		store:         storage.NewEphemeralStore(fromDate),
 		rest:          rest,
 		consumer:      consumer,
 	}, nil

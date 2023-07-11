@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -17,6 +18,10 @@ import (
 	"github.com/castai/otel-receivers/audit-logs/storage"
 )
 
+const (
+	layout = "2006-01-02T15:04:05.999999Z"
+)
+
 type auditLogsReceiver struct {
 	logger        *zap.Logger
 	pollInterval  time.Duration
@@ -28,7 +33,7 @@ type auditLogsReceiver struct {
 	consumer      consumer.Logs
 }
 
-func (a *auditLogsReceiver) Start(ctx context.Context, host component.Host) error {
+func (a *auditLogsReceiver) Start(ctx context.Context, _ component.Host) error {
 	fmt.Printf("--> HERE 1.1\n")
 
 	a.logger.Debug("starting audit logs receiver")
@@ -38,7 +43,7 @@ func (a *auditLogsReceiver) Start(ctx context.Context, host component.Host) erro
 	return nil
 }
 
-func (a *auditLogsReceiver) Shutdown(ctx context.Context) error {
+func (a *auditLogsReceiver) Shutdown(_ context.Context) error {
 	fmt.Printf("--> HERE 1.2\n")
 
 	a.logger.Debug("shutting down audit logs receiver")
@@ -72,77 +77,114 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 }
 
 func (a *auditLogsReceiver) poll(ctx context.Context) error {
-	// TODO: a.store should be used for handling timestamps.
-	queryParams := map[string]string{
-		"page.limit": "10",
-		"fromDate":   "2023-05-07T13:42:08.654Z",
-		"toDate":     "2023-07-08T13:42:08.654Z",
-	}
-	resp, err := a.rest.R().
-		SetContext(ctx).
-		SetQueryParams(queryParams).
-		Get("")
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode()/100 != 2 { // nolint:gomnd
-		return fmt.Errorf("unexpected response from audit logs api: code=%d, payload=%v", resp.StatusCode(), string(resp.Body()))
+	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
+	fromDate := a.store.GetFromDate()
+	toDate := time.Now()
+
+	var queryParams map[string]string
+	for true {
+		if queryParams == nil {
+			// TODO: use config and following code from kubecast
+			//if f.Limit == 0 {
+			//	f.Limit = DefaultLimit (100)
+			//}
+			//if f.Limit > MaxLimit (1000) {
+			//	f.Limit = MaxLimit
+			//}
+			pageLimit := 10
+
+			queryParams = map[string]string{
+				"page.limit": strconv.Itoa(pageLimit),
+				"fromDate":   fromDate.Format(layout),
+				"toDate":     toDate.Format(layout),
+			}
+		}
+
+		resp, err := a.rest.R().
+			SetContext(ctx).
+			SetQueryParams(queryParams).
+			Get("")
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode()/100 != 2 { // nolint:gomnd
+			return fmt.Errorf("unexpected response from audit logs api: code=%d, payload='%v'", resp.StatusCode(), string(resp.Body()))
+		}
+
+		auditLogsMap, err := a.processResponseBody(ctx, resp.Body(), toDate)
+		c, ok := auditLogsMap["cursor"]
+		if !ok {
+			// Cursor data is not provided, so it is the last page.
+			break
+		}
+
+		// TODO: WIP - handle pagination
+		// Creating query parameters based on cursor as there is more data to be fetched.
+		cursor, ok := c.(string)
+		if !ok {
+		}
+		if cursor == "" {
+			a.logger.Warn("empty cursor is returned, skipping")
+			break
+		}
+
+		// TODO: use config and following code from kubecast
+		//if f.Limit == 0 {
+		//	f.Limit = DefaultLimit (100)
+		//}
+		//if f.Limit > MaxLimit (1000) {
+		//	f.Limit = MaxLimit
+		//}
+		pageLimit := 10
+
+		queryParams = map[string]string{
+			"page.limit": strconv.Itoa(pageLimit),
+			"cursor":     cursor,
+		}
 	}
 
-	auditLogsMap, err := a.processResponseBody(ctx, resp.Body())
-	c, ok := auditLogsMap["cursor"]
-	if !ok {
-		// Cursor data is not provided so no next page.
-		return nil
-	}
-
-	// TODO: WIP - handle pagination
-	cursor, ok := c.(string)
-	if !ok {
-	}
-	if cursor != "" {
-	}
-
-	return err
+	return nil
 }
 
-func (a *auditLogsReceiver) processResponseBody(ctx context.Context, body []byte) (map[string]interface{}, error) {
+func (a *auditLogsReceiver) processResponseBody(ctx context.Context, body []byte, toDate time.Time) (map[string]interface{}, error) {
 	var auditLogsMap map[string]interface{}
 	err := json.Unmarshal(body, &auditLogsMap)
 	if err != nil {
 		return nil, fmt.Errorf("unexpected body in response: %v", body)
 	}
 
-	logs, err := a.processAuditLogs(auditLogsMap)
+	err = a.processAuditLogs(ctx, auditLogsMap, toDate)
 	if err != nil {
 		return nil, fmt.Errorf("processing audit logs items: %w", err)
-	}
-
-	if logs.LogRecordCount() > 0 {
-		if err = a.consumer.ConsumeLogs(ctx, logs); err != nil {
-			return nil, fmt.Errorf("consuming logs: %w", err)
-		}
 	}
 
 	return auditLogsMap, nil
 }
 
-func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}) (plog.Logs, error) {
+func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap map[string]interface{}, toDate time.Time) (err error) {
 	logs := plog.NewLogs()
+	fromDate := a.store.GetFromDate()
+	defer func() {
+		if err == nil {
+			a.store.PutFromDate(toDate)
+		}
+	}()
 	if len(auditLogsMap) == 0 {
-		return logs, nil
+		// TODO: test edges
+		a.store.PutFromDate(fromDate.Add(a.pollInterval))
+		return nil
 	}
 
 	its, ok := auditLogsMap["items"]
 	if !ok {
 		a.logger.Warn("no audit logs items found in the response, skipping", zap.Any("response", auditLogsMap))
-		return logs, nil
+		return nil
 	}
 
 	items, ok := its.([]interface{})
 	if !ok {
 		a.logger.Warn("invalid items type in the response, skipping", zap.Any("items", its))
-		return logs, nil
+		return nil
 	}
 
 	for _, it := range items {
@@ -164,9 +206,10 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 
 		resourceLog := logs.ResourceLogs().AppendEmpty()
 		logRecord := resourceLog.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
-		err := logRecord.Attributes().FromRaw(attributesMap)
+		err = logRecord.Attributes().FromRaw(attributesMap)
 		if err != nil {
-			return logs, err
+			// TODO: Should it fail with error?
+			return err
 		}
 
 		str, ok := item["time"].(string)
@@ -175,8 +218,8 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 			continue
 		}
 
-		layout := "2006-01-02T15:04:05.999999Z"
-		auditLogTimestamp, err := time.Parse(layout, str)
+		var auditLogTimestamp time.Time
+		auditLogTimestamp, err = time.Parse(layout, str)
 		if err != nil {
 			a.logger.Warn("item's time was not recognized, skipping", zap.Any("time", str), zap.Error(err))
 			continue
@@ -187,5 +230,11 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 		logRecord.SetTimestamp(pcommon.NewTimestampFromTime(auditLogTimestamp))
 	}
 
-	return logs, nil
+	if logs.LogRecordCount() > 0 {
+		if err = a.consumer.ConsumeLogs(ctx, logs); err != nil {
+			return fmt.Errorf("consuming logs: %w", err)
+		}
+	}
+
+	return nil
 }

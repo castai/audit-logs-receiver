@@ -3,20 +3,29 @@
 # Declare variables to be passed into your templates.
 
 image:
-  # If you want to use the core image `otel/opentelemetry-collector`, you also need to change `command.name` value to `otelcol`.
   repository: otel/opentelemetry-collector-contrib
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
-  # When digest is set to a non-empty value, images will be pulled by digest (regardless of tag value).
-  digest: ""
 
 replicaCount: 1
+
+# URL to the API server
+apiURL: "https://api.cast.ai"
+
+# Token to be used for authorizing agent access to the API
+apiKey: "API_KEY"
+
+# Name of secret with Token to be used for authorizing agent access to the API
+# apiKey and apiKeySecretRef are mutually exclusive
+# The referenced secret must provide the token in .data["API_KEY"]
+apiKeySecretRef: ""
 
 # annotations to add to all resources
 commonAnnotations: {}
 
-# additionalSecretEnv: {}
+# Specifies whether a namespace should be created
+createNamespace: true
 
 serviceAccount:
   # Specifies whether a service account should be created
@@ -56,20 +65,6 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-# URL to the API server
-apiURL: "https://api.cast.ai"
-
-# Token to be used for authorizing agent access to the API
-apiKey: "API_KEY"
-
-# Name of secret with Token to be used for authorizing agent access to the API
-# apiKey and apiKeySecretRef are mutually exclusive
-# The referenced secret must provide the token in .data["API_KEY"]
-apiKeySecretRef: ""
-
-# Specifies whether a namespace should be created
-createNamespace: true
 
 rollout:
   rollingUpdate: {}

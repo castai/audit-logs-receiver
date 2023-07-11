@@ -135,19 +135,20 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 
 	its, ok := auditLogsMap["items"]
 	if !ok {
-		a.logger.Warn("no audit logs items found, response is skipped")
+		a.logger.Warn("no audit logs items found in the response, skipping", zap.Any("response", auditLogsMap))
 		return logs, nil
 	}
 
 	items, ok := its.([]interface{})
 	if !ok {
-		return logs, fmt.Errorf("invalid response from audit logs api: %v", auditLogsMap)
+		a.logger.Warn("invalid items type in the response, skipping", zap.Any("items", its))
+		return logs, nil
 	}
 
 	for _, it := range items {
 		item, ok := it.(map[string]interface{})
 		if !ok {
-			a.logger.Warn("no audit logs item found, item is skipped")
+			a.logger.Warn("invalid item type among items, skipping", zap.Any("item", it))
 			continue
 		}
 
@@ -170,13 +171,15 @@ func (a *auditLogsReceiver) processAuditLogs(auditLogsMap map[string]interface{}
 
 		str, ok := item["time"].(string)
 		if !ok {
-			a.logger.Error("--> HERE 2.2 ", zap.Error(err))
+			a.logger.Warn("invalid item's time type, skipping", zap.Any("time", str))
+			continue
 		}
 
 		layout := "2006-01-02T15:04:05.999999Z"
 		auditLogTimestamp, err := time.Parse(layout, str)
 		if err != nil {
-			a.logger.Error("--> HERE 2.3 ", zap.Error(err))
+			a.logger.Warn("item's time was not recognized, skipping", zap.Any("time", str), zap.Error(err))
+			continue
 		}
 
 		observedTime := pcommon.NewTimestampFromTime(time.Now())

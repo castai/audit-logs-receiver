@@ -14,7 +14,3 @@ processors:
 
 exporters:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.80.0
-
-replaces:
-  # Override Lokiexporter dependencies.
-  - google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc

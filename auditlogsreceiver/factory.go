@@ -3,6 +3,7 @@ package auditlogs
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +38,6 @@ func CreateAuditLogsReceiver(
 		return nil, errInvalidConfig
 	}
 
-	restyClient := newRestyClient(cfg)
 	// TODO: introduce possibility to use Persistent Store based on configuration.
 	store := storage.NewEphemeralStore(time.Now().Add(-1 * time.Duration(cfg.PollIntervalSec) * time.Second))
 
@@ -46,12 +46,10 @@ func CreateAuditLogsReceiver(
 		pollInterval:  time.Second * time.Duration(cfg.PollIntervalSec),
 		pageLimit:     cfg.PageLimit,
 		nextStartTime: time.Now().Add(time.Duration(cfg.PollIntervalSec)),
-		url:           cfg.Url,
-		token:         cfg.Token,
 		wg:            &sync.WaitGroup{},
 		doneChan:      make(chan bool),
 		store:         store,
-		rest:          restyClient,
+		rest:          newRestyClient(cfg),
 		consumer:      consumer,
 	}, nil
 }
@@ -60,6 +58,8 @@ func newRestyClient(cfg *Config) *resty.Client {
 	client := resty.New().
 		SetHeader("Content-Type", "application/json").
 		SetRetryCount(1).
-		SetTimeout(time.Second * 10)
+		SetTimeout(time.Second*10).
+		SetBaseURL(strings.TrimSuffix(cfg.Url, "/")+"/v1/audit").
+		SetHeader("X-API-Key", cfg.Token)
 	return client
 }

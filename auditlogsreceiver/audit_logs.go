@@ -3,11 +3,10 @@ package auditlogs
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -24,18 +23,11 @@ const (
 	timestampLayout = "2006-01-02T15:04:05.999999Z"
 )
 
-var (
-	errUnauthenticated = errors.New("invalid api token")
-	errUnauthorized    = errors.New("unauthorized")
-)
-
 type auditLogsReceiver struct {
 	logger        *zap.Logger
 	pollInterval  time.Duration
 	pageLimit     int
 	nextStartTime time.Time
-	url           string
-	token         string
 	wg            *sync.WaitGroup
 	doneChan      chan bool
 	store         storage.Store
@@ -72,7 +64,6 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 		err := a.poll(ctx, cancel)
 		if err != nil {
 			a.logger.Error("there was an error during the poll", zap.Error(err))
-			return
 		}
 
 		select {
@@ -101,9 +92,6 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 			}
 		}
 
-		a.rest.SetBaseURL(strings.TrimSuffix(a.url, "/") + "/v1/audit")
-		a.rest.SetHeader("X-API-Key", a.token)
-
 		resp, err := a.rest.R().
 			SetContext(ctx).
 			SetQueryParams(queryParams).
@@ -114,9 +102,11 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		if resp.StatusCode() > 399 {
 			switch resp.StatusCode() {
 			case 401, 403:
-				return errUnauthenticated
+				cancel()
+				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+				return fmt.Errorf("invalid api token, response code: %d", resp.StatusCode())
 			default:
-				a.logger.Warn("unexpected response from audit logs api", zap.Any("response_code", resp.StatusCode()))
+				a.logger.Warn("unexpected response from audit logs api:", zap.Any("response_code", resp.StatusCode()))
 				return fmt.Errorf("got non 200 status code %d", resp.StatusCode())
 			}
 		}

@@ -106,10 +106,11 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 			break
 		}
 
-		// TODO: WIP - handle pagination
 		// Creating query parameters based on cursor as there is more data to be fetched.
 		cursor, ok := c.(string)
 		if !ok {
+			a.logger.Warn("invalid empty cursor type is returned, skipping")
+			break
 		}
 		if cursor == "" {
 			a.logger.Warn("empty cursor is returned, skipping")

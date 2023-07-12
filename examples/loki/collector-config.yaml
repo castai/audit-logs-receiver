@@ -17,6 +17,9 @@ processors:
         value: log.file.name
 
 service:
+  telemetry:
+    logs:
+      level: "debug"
   pipelines:
     logs:
       receivers: [castai-audit-logs]

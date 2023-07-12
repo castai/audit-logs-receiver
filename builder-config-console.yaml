@@ -1,0 +1,16 @@
+dist:
+  name: castai-collector-console
+  description: CAST AI OTel Collector that outputs Audit Logs to the console
+  output_path: ./collector-console
+  otelcol_version: 0.80.0
+
+receivers:
+  - gomod: github.com/castai/otel-receivers/audit-logs v0.80.0
+    import: github.com/castai/otel-receivers/audit-logs
+    name: "auditlogsreceiver"
+    path: "./auditlogsreceiver/"
+
+processors:
+
+exporters:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.80.0

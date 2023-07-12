@@ -100,7 +100,7 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 		}
 
 		auditLogsMap, err := a.processResponseBody(ctx, resp.Body(), toDate)
-		c, ok := auditLogsMap["cursor"]
+		c, ok := auditLogsMap["nextCursor"]
 		if !ok {
 			// Cursor data is not provided, so it is the last page.
 			break
@@ -117,8 +117,8 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 		}
 
 		queryParams = map[string]string{
-			"page.limit": strconv.Itoa(a.pageLimit),
-			"cursor":     cursor,
+			"page.limit":  strconv.Itoa(a.pageLimit),
+			"page.cursor": cursor,
 		}
 	}
 
@@ -173,7 +173,8 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 			continue
 		}
 
-		fmt.Printf("--> HERE 2.1 %v\n", item)
+		// Dumping content of the Audit Logs requires setting logger DEBUG level in collector configuration.
+		a.logger.Debug("processing new audit log", zap.Any("data", item))
 
 		attributesMap := map[string]interface{}{
 			"id":          item["id"],
@@ -185,9 +186,10 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 
 		resourceLog := logs.ResourceLogs().AppendEmpty()
 		logRecord := resourceLog.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+
+		// It may fail due to invalid type used in attributesMap; in that case nothing can be done so entry is skipped.
 		err = logRecord.Attributes().FromRaw(attributesMap)
 		if err != nil {
-			// TODO: Should it fail with error?
 			return err
 		}
 

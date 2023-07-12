@@ -3,9 +3,11 @@ package auditlogs
 import (
 	"context"
 	"errors"
-	"github.com/castai/otel-receivers/audit-logs/storage"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/castai/otel-receivers/audit-logs/storage"
 
 	"github.com/go-resty/resty/v2"
 	"go.opentelemetry.io/collector/component"
@@ -37,7 +39,7 @@ func CreateAuditLogsReceiver(
 	}
 
 	rest := resty.New()
-	rest.SetBaseURL(cfg.Url + "/v1/audit")
+	rest.SetBaseURL(strings.TrimSuffix(cfg.Url, "/") + "/v1/audit")
 	rest.SetHeader("X-API-Key", cfg.Token)
 	rest.SetHeader("Content-Type", "application/json")
 	rest.SetRetryCount(1)

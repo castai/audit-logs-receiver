@@ -15,13 +15,6 @@ type Config struct {
 	PageLimit       int    `mapstructure:"castai_page_limit"`
 }
 
-var (
-	errEmptyURL        = errors.New("apir url must be specified")
-	errInvalidURL      = errors.New("api url must be in the form of <scheme>://<hostname>:<port>")
-	errEmptyToken      = errors.New("api token cannot be empty")
-	errInvalidInterval = errors.New("poll interval must be positive number")
-)
-
 func newDefaultConfig() component.Config {
 	// Default parameters.
 	return &Config{
@@ -33,20 +26,20 @@ func newDefaultConfig() component.Config {
 
 func (c Config) Validate() error {
 	if c.Url == "" {
-		return errEmptyURL
+		return errors.New("apir url must be specified")
 	}
 
 	_, err := url.ParseRequestURI(c.Url)
 	if err != nil {
-		return errInvalidURL
+		return errors.New("api url must be in the form of <scheme>://<hostname>:<port>")
 	}
 
 	if c.Token == "" {
-		return errEmptyToken
+		return errors.New("api token cannot be empty")
 	}
 
 	if c.PollIntervalSec <= 0 {
-		return errInvalidInterval
+		return errors.New("poll interval must be positive number")
 	}
 
 	// Capping to 1000 records per page which is max supported by the backend.

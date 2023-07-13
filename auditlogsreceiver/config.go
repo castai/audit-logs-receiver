@@ -2,6 +2,7 @@ package auditlogs
 
 import (
 	"errors"
+	"net/url"
 
 	"go.opentelemetry.io/collector/component"
 )
@@ -24,7 +25,14 @@ func newDefaultConfig() component.Config {
 }
 
 func (c Config) Validate() error {
-	// TODO: Validate URL and trim last '/' if present
+	if c.Url == "" {
+		return errors.New("api url must be specified")
+	}
+
+	_, err := url.ParseRequestURI(c.Url)
+	if err != nil {
+		return errors.New("api url must be in the form of <scheme>://<hostname>:<port>")
+	}
 
 	if c.Token == "" {
 		return errors.New("api token cannot be empty")

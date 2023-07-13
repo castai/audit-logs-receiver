@@ -16,7 +16,11 @@ processors:
         key: loki.attribute.labels
         value: log.file.name
 
+extensions:
+  health_check:
+
 service:
+  extensions: [health_check]
   telemetry:
     logs:
       level: "debug"

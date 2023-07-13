@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -36,6 +37,7 @@ type auditLogsReceiver struct {
 
 func (a *auditLogsReceiver) Start(ctx context.Context, _ component.Host) error {
 	a.logger.Debug("starting audit logs receiver")
+
 	a.wg.Add(1)
 	go a.startPolling(ctx)
 
@@ -53,11 +55,13 @@ func (a *auditLogsReceiver) Shutdown(_ context.Context) error {
 func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 	defer a.wg.Done()
 
+	ctx, cancel := context.WithCancel(ctx)
+
 	t := time.NewTicker(a.pollInterval)
 	defer t.Stop()
 
 	for {
-		err := a.poll(ctx)
+		err := a.poll(ctx, cancel)
 		if err != nil {
 			a.logger.Error("there was an error during the poll", zap.Error(err))
 		}
@@ -73,7 +77,7 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 	}
 }
 
-func (a *auditLogsReceiver) poll(ctx context.Context) error {
+func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc) error {
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
 	fromDate := a.store.GetFromDate()
 	toDate := time.Now()
@@ -95,11 +99,26 @@ func (a *auditLogsReceiver) poll(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if resp.StatusCode()/100 != 2 { // nolint:gomnd
-			return fmt.Errorf("unexpected response from audit logs api: code=%d, payload='%v'", resp.StatusCode(), string(resp.Body()))
+		if resp.StatusCode() > 399 {
+			switch resp.StatusCode() {
+			case 401, 403:
+				// Shutdown collector if unable to authenticate to the api.
+				cancel()
+				err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+				if err != nil {
+					return err
+				}
+				return fmt.Errorf("invalid api token, response code: %d", resp.StatusCode())
+			default:
+				a.logger.Warn("unexpected response from audit logs api:", zap.Any("response_code", resp.StatusCode()))
+				return fmt.Errorf("got non 200 status code %d", resp.StatusCode())
+			}
 		}
 
 		auditLogsMap, err := a.processResponseBody(ctx, resp.Body(), toDate)
+		if err != nil {
+			return err
+		}
 		c, ok := auditLogsMap["nextCursor"]
 		if !ok {
 			// Cursor data is not provided, so it is the last page.

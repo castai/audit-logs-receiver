@@ -12,7 +12,11 @@ exporters:
 
 processors:
 
+extensions:
+  health_check:
+
 service:
+  extensions: [health_check]
   telemetry:
     logs:
       level: "debug"

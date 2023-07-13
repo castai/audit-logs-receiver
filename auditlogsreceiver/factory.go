@@ -3,9 +3,11 @@ package auditlogs
 import (
 	"context"
 	"errors"
-	"github.com/castai/otel-receivers/audit-logs/storage"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/castai/otel-receivers/audit-logs/storage"
 
 	"github.com/go-resty/resty/v2"
 	"go.opentelemetry.io/collector/component"
@@ -36,13 +38,6 @@ func CreateAuditLogsReceiver(
 		return nil, errInvalidConfig
 	}
 
-	rest := resty.New()
-	rest.SetBaseURL(cfg.Url + "/v1/audit")
-	rest.SetHeader("X-API-Key", cfg.Token)
-	rest.SetHeader("Content-Type", "application/json")
-	rest.SetRetryCount(1)
-	rest.SetTimeout(time.Second * 10)
-
 	// TODO: introduce possibility to use Persistent Store based on configuration.
 	store := storage.NewEphemeralStore(time.Now().Add(-1 * time.Duration(cfg.PollIntervalSec) * time.Second))
 
@@ -54,7 +49,17 @@ func CreateAuditLogsReceiver(
 		wg:            &sync.WaitGroup{},
 		doneChan:      make(chan bool),
 		store:         store,
-		rest:          rest,
+		rest:          newRestyClient(cfg),
 		consumer:      consumer,
 	}, nil
+}
+
+func newRestyClient(cfg *Config) *resty.Client {
+	client := resty.New().
+		SetHeader("Content-Type", "application/json").
+		SetRetryCount(1).
+		SetTimeout(time.Second*10).
+		SetBaseURL(strings.TrimSuffix(cfg.Url, "/")+"/v1/audit").
+		SetHeader("X-API-Key", cfg.Token)
+	return client
 }

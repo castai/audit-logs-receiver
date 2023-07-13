@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: otel/opentelemetry-collector-contrib
+  repository: ghcr.io/castai/otelcol-receiver
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
@@ -14,7 +14,7 @@ replicaCount: 1
 apiURL: "https://api.cast.ai"
 
 # Token to be used for authorizing agent access to the API
-apiKey: "API_KEY"
+apiKey: ""
 
 # Name of secret with Token to be used for authorizing agent access to the API
 # apiKey and apiKeySecretRef are mutually exclusive

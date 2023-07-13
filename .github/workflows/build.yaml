@@ -30,13 +30,6 @@ jobs:
           go install go.opentelemetry.io/collector/cmd/builder@latest
           go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/mdatagen@latest
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-build-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-build-
-
       - name: Get release tag
         if: github.event_name == 'release'
         run: echo "RELEASE_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
@@ -69,7 +62,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: docker/build-push-action@v2
         with:
-          context: .
+          context: ./examples/loki/collector-loki
           file: ./examples/loki/collector-loki/Dockerfile
           platforms: linux/arm64,linux/amd64
           push: ${{ github.event_name == 'pull_request' }}

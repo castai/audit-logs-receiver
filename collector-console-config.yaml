@@ -5,8 +5,8 @@ receivers:
     castai_poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
     castai_page_limit:        10 # This parameter defines the max number of records returned from the backend in one page.
     castai_storage:
-      type: "in-memory"
-      back_from_now_sec: 3600
+      type: "persistent"
+      filename: "./aaa.json"
 
 exporters:
   file:

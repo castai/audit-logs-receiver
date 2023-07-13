@@ -39,15 +39,14 @@ func NewAuditLogsReceiver(
 	}
 
 	return &auditLogsReceiver{
-		logger:        settings.Logger,
-		pollInterval:  time.Second * time.Duration(cfg.PollIntervalSec),
-		pageLimit:     cfg.PageLimit,
-		nextStartTime: time.Now().Add(time.Duration(cfg.PollIntervalSec)),
-		wg:            &sync.WaitGroup{},
-		doneChan:      make(chan bool),
-		storage:       newStorage(settings.Logger, cfg),
-		rest:          newRestyClient(cfg),
-		consumer:      consumer,
+		logger:       settings.Logger,
+		pollInterval: time.Second * time.Duration(cfg.PollIntervalSec),
+		pageLimit:    cfg.PageLimit,
+		wg:           &sync.WaitGroup{},
+		doneChan:     make(chan bool),
+		storage:      newStorage(settings.Logger, cfg),
+		rest:         newRestyClient(cfg),
+		consumer:     consumer,
 	}, nil
 }
 
@@ -55,18 +54,19 @@ func newStorage(logger *zap.Logger, cfg *Config) storage.Storage {
 	// Configuration validation is done in config.validate method, so it is safe to use configuration without validations here.
 	storageType := cfg.Storage["type"].(string)
 
-	// TODO: introduce possibility to use Persistent Storage based on configuration.
 	switch storageType {
 	case "in-memory":
 		backFromNowSec := cfg.Storage["back_from_now_sec"].(int)
-		from := time.Now().Add(time.Second * time.Duration(-backFromNowSec))
+		from := time.Now().UTC().Add(time.Second * time.Duration(-backFromNowSec))
 		logger.Info("creating an in-memory storage used for keeping timestamps by audit logs receiver", zap.Time("from", from))
-		return storage.NewInMemoryStorage(from)
+		return storage.NewInMemoryStorage(logger, storage.Data{
+			// TODO: read from config
+			CheckPoint: time.Now().UTC(),
+		})
 	case "persistent":
-		backFromNowSec := cfg.Storage["back_from_now_sec"].(int)
-		from := time.Now().Add(time.Second * time.Duration(-backFromNowSec))
-		logger.Info("creating a persistent storage used for keeping timestamps by audit logs receiver", zap.Time("from", from))
-		return storage.NewPersistentStorage(from)
+		filename := cfg.Storage["filename"].(string)
+		logger.Info("creating a persistent storage used for keeping timestamps by audit logs receiver", zap.String("filename", filename))
+		return storage.NewPersistentStorage(logger, filename)
 	default:
 		logger.Fatal("invalid storage type provided for audit logs exporter", zap.String("type", storageType))
 		return nil
@@ -74,11 +74,10 @@ func newStorage(logger *zap.Logger, cfg *Config) storage.Storage {
 }
 
 func newRestyClient(cfg *Config) *resty.Client {
-	client := resty.New().
+	return resty.New().
 		SetHeader("Content-Type", "application/json").
 		SetRetryCount(1).
 		SetTimeout(time.Second*10).
 		SetBaseURL(strings.TrimSuffix(cfg.Url, "/")+"/v1/audit").
 		SetHeader("X-API-Key", cfg.Token)
-	return client
 }

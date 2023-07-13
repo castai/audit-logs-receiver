@@ -59,6 +59,7 @@ func (c Config) Validate() error {
 	}
 
 	// TODO: validate storage config
+	// TODO: values may be empty
 	switch storageType {
 	case "in-memory":
 		// This is an optional parameter.
@@ -70,7 +71,15 @@ func (c Config) Validate() error {
 			}
 		}
 	case "persistent":
-		// TODO: WIP
+		b, ok := c.Storage["filename"]
+		if !ok {
+			return errors.New("filename is missing for persistent storage")
+		}
+
+		_, ok = b.(string)
+		if !ok {
+			return errors.New("invalid filename type")
+		}
 	default:
 		return errors.New("unsupported storage type provided")
 	}

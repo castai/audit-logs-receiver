@@ -7,6 +7,6 @@ import (
 )
 
 const (
-	Type          = "otelcolreceiver"
+	Type          = "castai-audit-logs"
 	LogsStability = component.StabilityLevelAlpha
 )

@@ -1,0 +1,24 @@
+dist:
+  name: castai-collector-loki
+  description: CAST AI OTel Collector that outputs Audit Logs to Grafana Loki
+  output_path: ./examples/loki/collector-loki
+  otelcol_version: 0.80.0
+
+receivers:
+  - gomod: github.com/castai/otel-receivers/audit-logs v0.80.0
+    import: github.com/castai/otel-receivers/audit-logs
+    name: "auditlogsreceiver"
+    path: "./auditlogsreceiver/"
+
+extensions:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.80.0
+
+processors:
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.80.0"
+
+exporters:
+  - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.80.0"
+
+replaces:
+  # Override Lokiexporter dependencies.
+  - google.golang.org/genproto => google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc

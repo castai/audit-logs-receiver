@@ -1,0 +1,31 @@
+receivers:
+  castai-audit-logs:
+    castai_api_url:           ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
+    castai_api_token:         ${env:CASTAI_API_TOKEN} # Use CASTAI_API_TOKEN env variable to provide token
+    castai_poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
+    castai_page_limit:        100 # This parameter defines max amount of records returned from the backend in one page.
+
+exporters:
+  loki:
+    endpoint: http://localhost:3100/loki/api/v1/push
+
+processors:
+  attributes:
+    actions:
+      - action: insert
+        key: loki.attribute.labels
+        value: log.file.name
+
+extensions:
+  health_check:
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    logs:
+      receivers: [castai-audit-logs]
+      processors: [attributes]
+      exporters: [loki]

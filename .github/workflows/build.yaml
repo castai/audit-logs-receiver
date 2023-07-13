@@ -27,9 +27,8 @@ jobs:
       
       - name: Install dependencies
         run: |
-          go get .
-          go get go.opentelemetry.io/collector/cmd/builder@latest
-          go get github.com/open-telemetry/opentelemetry-collector-contrib/cmd/mdatagen@latest
+          go install go.opentelemetry.io/collector/cmd/builder@latest
+          go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/mdatagen@latest
 
       - name: Cache Go modules
         uses: actions/cache@v3

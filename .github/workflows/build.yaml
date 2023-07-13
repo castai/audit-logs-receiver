@@ -45,7 +45,7 @@ jobs:
         run: builder --skip-compilation --config builder-config-console.yaml 
 
       - name: Build Go binary amd64
-        run: go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o bin/castai-otelcol-receiver-amd64 -C collector-console
+        run: cd collector-console && go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o bin/castai-otelcol-receiver-amd64 
         env:
           GOOS: linux
           GOARCH: amd64

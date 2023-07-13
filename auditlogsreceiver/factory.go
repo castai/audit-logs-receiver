@@ -3,6 +3,7 @@ package auditlogs
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 

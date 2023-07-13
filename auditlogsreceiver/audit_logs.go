@@ -102,8 +102,12 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		if resp.StatusCode() > 399 {
 			switch resp.StatusCode() {
 			case 401, 403:
+				// Shutdown collector if unable to authenticate to the api.
 				cancel()
-				syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+				err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+				if err != nil {
+					return err
+				}
 				return fmt.Errorf("invalid api token, response code: %d", resp.StatusCode())
 			default:
 				a.logger.Warn("unexpected response from audit logs api:", zap.Any("response_code", resp.StatusCode()))
@@ -112,6 +116,9 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		}
 
 		auditLogsMap, err := a.processResponseBody(ctx, resp.Body(), toDate)
+		if err != nil {
+			return err
+		}
 		c, ok := auditLogsMap["nextCursor"]
 		if !ok {
 			// Cursor data is not provided, so it is the last page.

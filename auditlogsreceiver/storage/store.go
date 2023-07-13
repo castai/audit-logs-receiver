@@ -4,25 +4,43 @@ import (
 	"time"
 )
 
-type Store interface {
+type Storage interface {
 	PutFromDate(time.Time)
 	GetFromDate() time.Time
 }
 
-type ephemeralStore struct {
+type inMemoryStorage struct {
 	fromDate time.Time
 }
 
-func NewEphemeralStore(fromDate time.Time) Store {
-	return &ephemeralStore{
+func NewInMemoryStorage(fromDate time.Time) Storage {
+	return &inMemoryStorage{
 		fromDate: fromDate,
 	}
 }
 
-func (s *ephemeralStore) GetFromDate() time.Time {
+func (s *inMemoryStorage) GetFromDate() time.Time {
 	return s.fromDate
 }
 
-func (s *ephemeralStore) PutFromDate(fromDate time.Time) {
+func (s *inMemoryStorage) PutFromDate(fromDate time.Time) {
+	s.fromDate = fromDate
+}
+
+type persistentStorage struct {
+	fromDate time.Time
+}
+
+func NewPersistentStorage(fromDate time.Time) Storage {
+	return &persistentStorage{
+		fromDate: fromDate,
+	}
+}
+
+func (s *persistentStorage) GetFromDate() time.Time {
+	return s.fromDate
+}
+
+func (s *persistentStorage) PutFromDate(fromDate time.Time) {
 	s.fromDate = fromDate
 }

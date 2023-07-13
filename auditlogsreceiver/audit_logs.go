@@ -30,7 +30,7 @@ type auditLogsReceiver struct {
 	nextStartTime time.Time
 	wg            *sync.WaitGroup
 	doneChan      chan bool
-	store         storage.Store
+	storage       storage.Storage
 	rest          *resty.Client
 	consumer      consumer.Logs
 }
@@ -79,7 +79,7 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 
 func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc) error {
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
-	fromDate := a.store.GetFromDate()
+	fromDate := a.storage.GetFromDate()
 	toDate := time.Now()
 
 	var queryParams map[string]string
@@ -128,11 +128,10 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		// Creating query parameters based on cursor as there is more data to be fetched.
 		cursor, ok := c.(string)
 		if !ok {
-			a.logger.Warn("invalid empty cursor type is returned, skipping")
+			a.logger.Warn("invalid cursor type is returned, skipping")
 			break
 		}
 		if cursor == "" {
-			a.logger.Warn("empty cursor is returned, skipping")
 			break
 		}
 
@@ -162,15 +161,15 @@ func (a *auditLogsReceiver) processResponseBody(ctx context.Context, body []byte
 
 func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap map[string]interface{}, toDate time.Time) (err error) {
 	logs := plog.NewLogs()
-	fromDate := a.store.GetFromDate()
+	fromDate := a.storage.GetFromDate()
 	defer func() {
 		if err == nil {
-			a.store.PutFromDate(toDate)
+			a.storage.PutFromDate(toDate)
 		}
 	}()
 	if len(auditLogsMap) == 0 {
 		// TODO: test edges
-		a.store.PutFromDate(fromDate.Add(a.pollInterval))
+		a.storage.PutFromDate(fromDate.Add(a.pollInterval))
 		return nil
 	}
 

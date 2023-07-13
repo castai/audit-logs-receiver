@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "castai-otel-collector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "castai-otel-collector.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "castai-otel-collector.fullname" . }}
+  podManagementPolicy: {{ .Values.statefulset.podManagementPolicy }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "castai-otel-collector.selectorLabels" . | nindent 6 }}
+  updateStrategy:
+    type: {{ .Values.rollout.strategy }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "castai-otel-collector.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "castai-otel-collector.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: CASTAI_API_URL
+              value: {{ required "apiURL must be provided" .Values.apiURL | quote }}
+          volumeMounts:
+            {{- if .Values.configMap.create }}
+            - mountPath: /conf
+              name: {{ include "castai-otel-collector.lowercase_chartname" . }}-configmap
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - mountPath: /var/lib/otelcol/file_storage
+              name: {{ include "castai-otel-collector.lowercase_chartname" . }}-statestorage
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          envFrom:
+            - secretRef:
+          {{- if .Values.apiKey }}
+                name: {{ include "castai-otel-collector.fullname" . -}}
+          {{- else }}
+                name: {{ required "apiKey or apiKeySecretRef must be provided" .Values.apiKeySecretRef -}}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        {{- if .Values.configMap.create }}
+        - name: {{ include "castai-otel-collector.lowercase_chartname" . }}-configmap
+          configMap:
+            name: {{ include "castai-otel-collector.fullname" . }}{{ .configmapSuffix }}
+            items:
+              - key: relay
+                path: relay.yaml
+        {{- end }}
+        {{- if .Values.persistence.enabled }}
+        - name: {{ include "castai-otel-collector.lowercase_chartname" . }}-statestorage
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "castai-otel-collector.fullname" .) }}
+        {{- end }}
+      hostNetwork: {{ .Values.hostNetwork }}

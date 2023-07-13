@@ -1,0 +1,122 @@
+# Default values for castai-otel-collector.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: ghcr.io/castai/otelcol-receiver
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+replicaCount: 1
+
+# URL to the API server
+apiURL: "https://api.cast.ai"
+
+# Token to be used for authorizing agent access to the API
+apiKey: ""
+
+# Name of secret with Token to be used for authorizing agent access to the API
+# apiKey and apiKeySecretRef are mutually exclusive
+# The referenced secret must provide the token in .data["API_KEY"]
+apiKeySecretRef: ""
+
+# annotations to add to all resources
+commonAnnotations: {}
+
+# Specifies whether a namespace should be created
+createNamespace: true
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+imagePullSecrets: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+rollout:
+  rollingUpdate: {}
+  # When 'mode: daemonset', maxSurge cannot be used when hostPort is set for any of the ports
+  # maxSurge: 25%
+  # maxUnavailable: 0
+  strategy: RollingUpdate
+
+configMap:
+  # Specifies whether a configMap should be created (true by default)
+  create: true
+
+# Host networking requested for this pod. Use the host's network namespace.
+hostNetwork: false
+
+config:
+  receivers:
+    filelog:
+      include:
+        - "/var/log/pods/*/*/*.log"
+
+  exporters:
+      logging:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+  extensions:
+    # The health_check extension is mandatory for this chart.
+    # Without the health_check extension the collector will fail the readiness and liveliness probes.
+    # The health_check extension can be modified, but should never be removed.
+    health_check: {}
+
+    service:
+      extensions:
+      - health_check
+      pipelines:
+        logs:
+          receivers:
+          - filelog
+          processors:
+          - attributes
+          exporters:
+          - logging
+
+## Persist collector state to a persistent volume
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+
+statefulset:
+  podManagementPolicy: "Parallel"

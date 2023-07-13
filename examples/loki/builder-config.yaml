@@ -10,6 +10,9 @@ receivers:
     name: "auditlogsreceiver"
     path: "./auditlogsreceiver/"
 
+extensions:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.80.0
+
 processors:
   - gomod: "github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.80.0"
 

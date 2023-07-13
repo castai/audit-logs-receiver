@@ -26,7 +26,7 @@ func newDefaultConfig() component.Config {
 
 func (c Config) Validate() error {
 	if c.Url == "" {
-		return errors.New("apir url must be specified")
+		return errors.New("api url must be specified")
 	}
 
 	_, err := url.ParseRequestURI(c.Url)

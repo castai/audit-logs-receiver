@@ -86,10 +86,10 @@ config:
       castai_api_url:           ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
       castai_api_token:         ${env:CASTAI_API_TOKEN} # Use CASTAI_API_TOKEN env variable to provide token
       castai_poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
-      castai_page_limit:        10 # This parameter defines the max number of records returned from the backend in one page.
+      castai_page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
       castai_storage:
         type: "persistent"
-        filename: "/var/lib/otelcol/file_storage/aaa.json"
+        filename: "/var/lib/otelcol/file_storage/audit_logs_poll_data.json"
 
   exporters:
     loki:

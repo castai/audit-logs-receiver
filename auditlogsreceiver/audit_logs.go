@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/samber/lo"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -24,15 +25,14 @@ const (
 )
 
 type auditLogsReceiver struct {
-	logger        *zap.Logger
-	pollInterval  time.Duration
-	pageLimit     int
-	nextStartTime time.Time
-	wg            *sync.WaitGroup
-	doneChan      chan bool
-	store         storage.Store
-	rest          *resty.Client
-	consumer      consumer.Logs
+	logger       *zap.Logger
+	pollInterval time.Duration
+	pageLimit    int
+	wg           *sync.WaitGroup
+	doneChan     chan bool
+	storage      storage.Storage
+	rest         *resty.Client
+	consumer     consumer.Logs
 }
 
 func (a *auditLogsReceiver) Start(ctx context.Context, _ component.Host) error {
@@ -79,16 +79,30 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 
 func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc) error {
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
-	fromDate := a.store.GetFromDate()
-	toDate := time.Now()
+	pollData := a.storage.Get()
+
+	// ToDate is present when exporter is restarted in the middle of pagination; ToDate is shifted with every page.
+	if pollData.ToDate == nil {
+		pollData.ToDate = lo.ToPtr(time.Now().UTC())
+		pollData.NextCheckPoint = pollData.ToDate
+
+		// Saving state as here fromDate and toDate are known.
+		err := a.storage.Save(pollData)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Dumping content of the Audit Logs to console.
+	a.logger.Debug("polling for audit logs", zap.Any("poll_data", pollData))
 
 	var queryParams map[string]string
-	for true {
+	for {
 		if queryParams == nil {
 			queryParams = map[string]string{
 				"page.limit": strconv.Itoa(a.pageLimit),
-				"fromDate":   fromDate.Format(timestampLayout),
-				"toDate":     toDate.Format(timestampLayout),
+				"toDate":     pollData.ToDate.Format(timestampLayout),
+				"fromDate":   pollData.CheckPoint.Format(timestampLayout),
 			}
 		}
 
@@ -104,7 +118,7 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 			case 401, 403:
 				// Shutdown collector if unable to authenticate to the api.
 				cancel()
-				err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+				err = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 				if err != nil {
 					return err
 				}
@@ -115,10 +129,18 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 			}
 		}
 
-		auditLogsMap, err := a.processResponseBody(ctx, resp.Body(), toDate)
+		auditLogsMap, lastAuditLogTimestamp, err := a.processResponseBody(ctx, resp.Body())
 		if err != nil {
 			return err
 		}
+
+		// Shifting ToDate towards the current check point with every processed page.
+		pollData.ToDate = lastAuditLogTimestamp
+		err = a.storage.Save(pollData)
+		if err != nil {
+			return err
+		}
+
 		c, ok := auditLogsMap["nextCursor"]
 		if !ok {
 			// Cursor data is not provided, so it is the last page.
@@ -128,11 +150,10 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		// Creating query parameters based on cursor as there is more data to be fetched.
 		cursor, ok := c.(string)
 		if !ok {
-			a.logger.Warn("invalid empty cursor type is returned, skipping")
+			a.logger.Warn("invalid cursor type is returned, skipping")
 			break
 		}
 		if cursor == "" {
-			a.logger.Warn("empty cursor is returned, skipping")
 			break
 		}
 
@@ -142,50 +163,47 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		}
 	}
 
+	// Storing state about Audit Logs export position.
+	pollData.CheckPoint = *pollData.NextCheckPoint
+	pollData.ToDate = nil
+	pollData.NextCheckPoint = nil
+	err := a.storage.Save(pollData)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (a *auditLogsReceiver) processResponseBody(ctx context.Context, body []byte, toDate time.Time) (map[string]interface{}, error) {
+func (a *auditLogsReceiver) processResponseBody(ctx context.Context, body []byte) (map[string]interface{}, *time.Time, error) {
 	var auditLogsMap map[string]interface{}
 	err := json.Unmarshal(body, &auditLogsMap)
 	if err != nil {
-		return nil, fmt.Errorf("unexpected body in response: %v", body)
+		return nil, nil, fmt.Errorf("unexpected body in response: %v", body)
 	}
 
-	err = a.processAuditLogs(ctx, auditLogsMap, toDate)
+	lastAuditLogTimestamp, err := a.processAuditLogs(ctx, auditLogsMap)
 	if err != nil {
-		return nil, fmt.Errorf("processing audit logs items: %w", err)
+		return nil, nil, fmt.Errorf("processing audit logs items: %w", err)
 	}
 
-	return auditLogsMap, nil
+	return auditLogsMap, lastAuditLogTimestamp, nil
 }
 
-func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap map[string]interface{}, toDate time.Time) (err error) {
-	logs := plog.NewLogs()
-	fromDate := a.store.GetFromDate()
-	defer func() {
-		if err == nil {
-			a.store.PutFromDate(toDate)
-		}
-	}()
-	if len(auditLogsMap) == 0 {
-		// TODO: test edges
-		a.store.PutFromDate(fromDate.Add(a.pollInterval))
-		return nil
-	}
-
+func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap map[string]interface{}) (lastAuditLogTimestamp *time.Time, err error) {
 	its, ok := auditLogsMap["items"]
 	if !ok {
 		a.logger.Warn("no audit logs items found in the response, skipping", zap.Any("response", auditLogsMap))
-		return nil
+		return
 	}
 
 	items, ok := its.([]interface{})
 	if !ok {
 		a.logger.Warn("invalid items type in the response, skipping", zap.Any("items", its))
-		return nil
+		return
 	}
 
+	logs := plog.NewLogs()
 	for _, it := range items {
 		item, ok := it.(map[string]interface{})
 		if !ok {
@@ -193,8 +211,8 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 			continue
 		}
 
-		// Dumping content of the Audit Logs requires setting logger DEBUG level in collector configuration.
-		a.logger.Debug("processing new audit log", zap.Any("data", item))
+		// Dumping content of the Audit Logs to console.
+		a.logger.Info("processing new audit log", zap.Any("data", item))
 
 		attributesMap := map[string]interface{}{
 			"id":          item["id"],
@@ -207,10 +225,10 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 		resourceLog := logs.ResourceLogs().AppendEmpty()
 		logRecord := resourceLog.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
-		// It may fail due to invalid type used in attributesMap; in that case nothing can be done so entry is skipped.
+		// It may fail due to an invalid type used in attributesMap; in that case, nothing can be done so entry is skipped.
 		err = logRecord.Attributes().FromRaw(attributesMap)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		str, ok := item["time"].(string)
@@ -225,17 +243,18 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 			a.logger.Warn("item's time was not recognized, skipping", zap.Any("time", str), zap.Error(err))
 			continue
 		}
+		lastAuditLogTimestamp = &auditLogTimestamp
 
-		observedTime := pcommon.NewTimestampFromTime(time.Now())
+		observedTime := pcommon.NewTimestampFromTime(time.Now().UTC())
 		logRecord.SetObservedTimestamp(observedTime)
 		logRecord.SetTimestamp(pcommon.NewTimestampFromTime(auditLogTimestamp))
 	}
 
 	if logs.LogRecordCount() > 0 {
 		if err = a.consumer.ConsumeLogs(ctx, logs); err != nil {
-			return fmt.Errorf("consuming logs: %w", err)
+			return nil, fmt.Errorf("consuming logs: %w", err)
 		}
 	}
 
-	return nil
+	return
 }

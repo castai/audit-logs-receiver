@@ -10,5 +10,5 @@ metadata:
     {{- include "castai-otel-collector.annotations" . | nindent 4 }}
   {{- end }}
 data:
-  relay: |
+  config: |
   {{- toYaml .Values.config | nindent 4 }}

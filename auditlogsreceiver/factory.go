@@ -2,7 +2,7 @@ package auditlogs
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -16,8 +16,6 @@ import (
 	"github.com/castai/otel-receivers/audit-logs/internal/metadata"
 	"github.com/castai/otel-receivers/audit-logs/storage"
 )
-
-var errInvalidConfig = errors.New("invalid config for tcpstatsreceiver")
 
 func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
@@ -35,7 +33,12 @@ func NewAuditLogsReceiver(
 ) (receiver.Logs, error) {
 	cfg, ok := cc.(*Config)
 	if !ok {
-		return nil, errInvalidConfig
+		return nil, fmt.Errorf("invalid configuration type")
+	}
+
+	st, err := newStorage(settings.Logger, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("creating storage: %w", err)
 	}
 
 	return &auditLogsReceiver{
@@ -44,32 +47,29 @@ func NewAuditLogsReceiver(
 		pageLimit:    cfg.PageLimit,
 		wg:           &sync.WaitGroup{},
 		doneChan:     make(chan bool),
-		storage:      newStorage(settings.Logger, cfg),
+		storage:      st,
 		rest:         newRestyClient(cfg),
 		consumer:     consumer,
 	}, nil
 }
 
-func newStorage(logger *zap.Logger, cfg *Config) storage.Storage {
+func newStorage(logger *zap.Logger, cfg *Config) (storage.Storage, error) {
 	// Configuration validation is done in config.validate method, so it is safe to use configuration without validations here.
 	storageType := cfg.Storage["type"].(string)
 
 	switch storageType {
 	case "in-memory":
-		backFromNowSec := cfg.Storage["back_from_now_sec"].(int)
-		from := time.Now().UTC().Add(time.Second * time.Duration(-backFromNowSec))
-		logger.Info("creating an in-memory storage used for keeping timestamps by audit logs receiver", zap.Time("from", from))
-		return storage.NewInMemoryStorage(logger, storage.PollData{
-			// TODO: read from config
-			CheckPoint: time.Now().UTC(),
-		})
+		backFromNowSec := 0
+		b, ok := cfg.Storage["back_from_now_sec"].(int)
+		if ok {
+			backFromNowSec = b
+		}
+
+		return storage.NewInMemoryStorage(logger, backFromNowSec), nil
 	case "persistent":
-		filename := cfg.Storage["filename"].(string)
-		logger.Info("creating a persistent storage used for keeping timestamps by audit logs receiver", zap.String("filename", filename))
-		return storage.NewPersistentStorage(logger, filename)
+		return storage.NewPersistentStorage(logger, cfg.Storage["filename"].(string))
 	default:
-		logger.Fatal("invalid storage type provided for audit logs exporter", zap.String("type", storageType))
-		return nil
+		return nil, fmt.Errorf("invalid storage type provided for audit logs exporter: %v", storageType)
 	}
 }
 

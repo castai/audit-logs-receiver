@@ -17,8 +17,8 @@ type PollData struct {
 }
 
 type Storage interface {
-	Save(PollData) error
 	Get() PollData
+	Save(PollData) error
 }
 
 type inMemoryStorage struct {
@@ -26,10 +26,16 @@ type inMemoryStorage struct {
 	pollData PollData
 }
 
-func NewInMemoryStorage(logger *zap.Logger, data PollData) Storage {
+func NewInMemoryStorage(logger *zap.Logger, backFromNowSec int) Storage {
+	logger.Info("new in-memory storage was created", zap.Int("back_from_now_sec", backFromNowSec))
+
 	return &inMemoryStorage{
-		logger:   logger,
-		pollData: data,
+		logger: logger,
+		pollData: PollData{
+			CheckPoint:     time.Now().UTC().Add(-time.Second * time.Duration(backFromNowSec)),
+			NextCheckPoint: nil,
+			ToDate:         nil,
+		},
 	}
 }
 
@@ -47,19 +53,49 @@ type persistentStorage struct {
 	inMemoryStorage
 }
 
-func NewPersistentStorage(logger *zap.Logger, filename string) Storage {
+func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) {
 	storage := persistentStorage{
 		inMemoryStorage: inMemoryStorage{
 			logger: logger,
 		},
 		filename: filename,
 	}
-	err := storage.load()
-	if err != nil {
-		fmt.Println(err)
+
+	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
+		err = storage.inMemoryStorage.Save(PollData{
+			CheckPoint:     time.Now().UTC(),
+			NextCheckPoint: nil,
+			ToDate:         nil,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("saving poll data configuration file: %w", err)
+		}
+		logger.Info("new persistent storage was created", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
+
+		return &storage, nil
 	}
 
-	return &storage
+	jsonFile, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("opening poll data configuration file: %w", err)
+	}
+	defer jsonFile.Close()
+
+	byteValue, err := io.ReadAll(jsonFile)
+	if err != nil {
+		return nil, fmt.Errorf("reading poll data configuration file: %w", err)
+	}
+
+	err = json.Unmarshal(byteValue, &storage.inMemoryStorage.pollData)
+	if err != nil {
+		return nil, fmt.Errorf("parsing poll data configuration file: %w", err)
+	}
+
+	// TODO: file content validation
+
+	logger.Info("loaded persistent configuration", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
+
+	return &storage, nil
 }
 
 func (s *persistentStorage) Get() PollData {
@@ -68,10 +104,7 @@ func (s *persistentStorage) Get() PollData {
 
 func (s *persistentStorage) Save(data PollData) error {
 	s.pollData = data
-	return s.save()
-}
 
-func (s *persistentStorage) save() error {
 	jsonBytes, err := json.Marshal(&s.inMemoryStorage.pollData)
 	if err != nil {
 		return err
@@ -81,37 +114,6 @@ func (s *persistentStorage) save() error {
 	if err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func (s *persistentStorage) load() error {
-	if _, err := os.Stat(s.filename); errors.Is(err, os.ErrNotExist) {
-		// TODO: logging
-		return s.inMemoryStorage.Save(PollData{
-			CheckPoint:     time.Now().UTC(),
-			NextCheckPoint: nil,
-			ToDate:         nil,
-		})
-	}
-
-	jsonFile, err := os.Open(s.filename)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer jsonFile.Close()
-
-	byteValue, err := io.ReadAll(jsonFile)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = json.Unmarshal(byteValue, &s.inMemoryStorage.pollData)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// TODO: file content validation
 
 	return nil
 }

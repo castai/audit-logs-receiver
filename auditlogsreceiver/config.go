@@ -2,6 +2,7 @@ package auditlogs
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 
 	"go.opentelemetry.io/collector/component"
@@ -58,7 +59,6 @@ func (c Config) Validate() error {
 		return errors.New("invalid storage type")
 	}
 
-	// TODO: validate storage config
 	// TODO: values may be empty
 	switch storageType {
 	case "in-memory":
@@ -67,18 +67,18 @@ func (c Config) Validate() error {
 		if ok {
 			_, ok = b.(int)
 			if !ok {
-				return errors.New("invalid back_from_now_sec type")
+				return fmt.Errorf("invalid back_from_now_sec type")
 			}
 		}
 	case "persistent":
-		b, ok := c.Storage["filename"]
+		filename, ok := c.Storage["filename"]
 		if !ok {
-			return errors.New("filename is missing for persistent storage")
+			return fmt.Errorf("filename is missing in persistent storage configuration")
 		}
 
-		_, ok = b.(string)
+		_, ok = filename.(string)
 		if !ok {
-			return errors.New("invalid filename type")
+			return fmt.Errorf("invalid filename type in persistent storage configuration")
 		}
 	default:
 		return errors.New("unsupported storage type provided")

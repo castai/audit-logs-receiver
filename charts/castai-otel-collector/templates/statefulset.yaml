@@ -60,7 +60,7 @@ spec:
               value: {{ required "apiURL must be provided" .Values.apiURL | quote }}
           volumeMounts:
             {{- if .Values.configMap.create }}
-            - mountPath: /conf
+            - mountPath: /etc/otel
               name: {{ include "castai-otel-collector.lowercase_chartname" . }}-configmap
             {{- end }}
             {{- if .Values.persistence.enabled }}
@@ -90,8 +90,8 @@ spec:
           configMap:
             name: {{ include "castai-otel-collector.fullname" . }}{{ .configmapSuffix }}
             items:
-              - key: relay
-                path: relay.yaml
+              - key: config
+                path: config.yaml
         {{- end }}
         {{- if .Values.persistence.enabled }}
         - name: {{ include "castai-otel-collector.lowercase_chartname" . }}-statestorage

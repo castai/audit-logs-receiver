@@ -79,35 +79,32 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 
 func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc) error {
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
-	data := a.storage.Get()
-
-	fmt.Printf("--> HERE 0.1 %v\n", data)
+	pollData := a.storage.Get()
 
 	// ToDate is present when exporter is restarted in the middle of pagination; ToDate is shifted with every page.
-	if data.ToDate == nil {
-		data.ToDate = lo.ToPtr(time.Now().UTC())
-		data.NextCheckPoint = data.ToDate
+	if pollData.ToDate == nil {
+		pollData.ToDate = lo.ToPtr(time.Now().UTC())
+		pollData.NextCheckPoint = pollData.ToDate
 
 		// Saving state as here fromDate and toDate are known.
-		err := a.storage.Save(data)
+		err := a.storage.Save(pollData)
 		if err != nil {
 			return err
 		}
-
-		fmt.Printf("--> HERE 0.2 %v\n", data)
 	}
+
+	// Dumping content of the Audit Logs to console.
+	a.logger.Debug("polling for audit logs", zap.Any("poll_data", pollData))
 
 	var queryParams map[string]string
 	for {
 		if queryParams == nil {
 			queryParams = map[string]string{
 				"page.limit": strconv.Itoa(a.pageLimit),
-				"toDate":     data.ToDate.Format(timestampLayout),
-				"fromDate":   data.CheckPoint.Format(timestampLayout),
+				"toDate":     pollData.ToDate.Format(timestampLayout),
+				"fromDate":   pollData.CheckPoint.Format(timestampLayout),
 			}
 		}
-
-		fmt.Printf("--> HERE 0.3 %v\n", queryParams)
 
 		resp, err := a.rest.R().
 			SetContext(ctx).
@@ -138,8 +135,8 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		}
 
 		// Shifting ToDate towards the current check point with every processed page.
-		data.ToDate = lastAuditLogTimestamp
-		err = a.storage.Save(data)
+		pollData.ToDate = lastAuditLogTimestamp
+		err = a.storage.Save(pollData)
 		if err != nil {
 			return err
 		}
@@ -167,10 +164,10 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 	}
 
 	// Storing state about Audit Logs export position.
-	data.CheckPoint = *data.NextCheckPoint
-	data.ToDate = nil
-	data.NextCheckPoint = nil
-	err := a.storage.Save(data)
+	pollData.CheckPoint = *pollData.NextCheckPoint
+	pollData.ToDate = nil
+	pollData.NextCheckPoint = nil
+	err := a.storage.Save(pollData)
 	if err != nil {
 		return err
 	}
@@ -214,8 +211,8 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 			continue
 		}
 
-		// Dumping content of the Audit Logs requires setting logger DEBUG level in collector configuration.
-		a.logger.Debug("processing new audit log", zap.Any("data", item))
+		// Dumping content of the Audit Logs to console.
+		a.logger.Info("processing new audit log", zap.Any("data", item))
 
 		attributesMap := map[string]interface{}{
 			"id":          item["id"],

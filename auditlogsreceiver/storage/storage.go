@@ -10,35 +10,35 @@ import (
 	"time"
 )
 
-type Data struct {
-	CheckPoint     time.Time
-	NextCheckPoint *time.Time
-	ToDate         *time.Time
+type PollData struct {
+	CheckPoint     time.Time  `json:"check_point"`
+	NextCheckPoint *time.Time `json:"next_check_point,omitempty"`
+	ToDate         *time.Time `json:"to_date,omitempty"`
 }
 
 type Storage interface {
-	Save(Data) error
-	Get() Data
+	Save(PollData) error
+	Get() PollData
 }
 
 type inMemoryStorage struct {
-	logger *zap.Logger
-	data   Data
+	logger   *zap.Logger
+	pollData PollData
 }
 
-func NewInMemoryStorage(logger *zap.Logger, data Data) Storage {
+func NewInMemoryStorage(logger *zap.Logger, data PollData) Storage {
 	return &inMemoryStorage{
-		logger: logger,
-		data:   data,
+		logger:   logger,
+		pollData: data,
 	}
 }
 
-func (s *inMemoryStorage) Get() Data {
-	return s.data
+func (s *inMemoryStorage) Get() PollData {
+	return s.pollData
 }
 
-func (s *inMemoryStorage) Save(data Data) error {
-	s.data = data
+func (s *inMemoryStorage) Save(data PollData) error {
+	s.pollData = data
 	return nil
 }
 
@@ -62,17 +62,17 @@ func NewPersistentStorage(logger *zap.Logger, filename string) Storage {
 	return &storage
 }
 
-func (s *persistentStorage) Get() Data {
-	return s.data
+func (s *persistentStorage) Get() PollData {
+	return s.pollData
 }
 
-func (s *persistentStorage) Save(data Data) error {
-	s.data = data
+func (s *persistentStorage) Save(data PollData) error {
+	s.pollData = data
 	return s.save()
 }
 
 func (s *persistentStorage) save() error {
-	jsonBytes, err := json.Marshal(&s.inMemoryStorage.data)
+	jsonBytes, err := json.Marshal(&s.inMemoryStorage.pollData)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (s *persistentStorage) save() error {
 func (s *persistentStorage) load() error {
 	if _, err := os.Stat(s.filename); errors.Is(err, os.ErrNotExist) {
 		// TODO: logging
-		return s.inMemoryStorage.Save(Data{
+		return s.inMemoryStorage.Save(PollData{
 			CheckPoint:     time.Now().UTC(),
 			NextCheckPoint: nil,
 			ToDate:         nil,
@@ -106,7 +106,7 @@ func (s *persistentStorage) load() error {
 		fmt.Println(err)
 	}
 
-	err = json.Unmarshal(byteValue, &s.inMemoryStorage.data)
+	err = json.Unmarshal(byteValue, &s.inMemoryStorage.pollData)
 	if err != nil {
 		fmt.Println(err)
 	}

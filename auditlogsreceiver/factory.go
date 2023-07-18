@@ -59,7 +59,7 @@ func newStorage(logger *zap.Logger, cfg *Config) storage.Storage {
 		backFromNowSec := cfg.Storage["back_from_now_sec"].(int)
 		from := time.Now().UTC().Add(time.Second * time.Duration(-backFromNowSec))
 		logger.Info("creating an in-memory storage used for keeping timestamps by audit logs receiver", zap.Time("from", from))
-		return storage.NewInMemoryStorage(logger, storage.Data{
+		return storage.NewInMemoryStorage(logger, storage.PollData{
 			// TODO: read from config
 			CheckPoint: time.Now().UTC(),
 		})

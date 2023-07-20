@@ -91,7 +91,23 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 		return nil, fmt.Errorf("parsing poll data configuration file: %w", err)
 	}
 
-	// TODO: file content validation
+	// Format validation is done by JSON unmarshaller so here only 'semantic' validations.
+	if storage.inMemoryStorage.pollData.NextCheckPoint != nil {
+		if storage.inMemoryStorage.pollData.ToDate == nil {
+			return nil, fmt.Errorf("to_date must be provided when next_check_point date is present")
+		}
+
+		if storage.inMemoryStorage.pollData.NextCheckPoint.Before(storage.inMemoryStorage.pollData.CheckPoint) {
+			return nil, fmt.Errorf("next_check_point date must succeed check_point")
+		}
+		if storage.inMemoryStorage.pollData.ToDate.Before(storage.inMemoryStorage.pollData.CheckPoint) {
+			return nil, fmt.Errorf("to_date date must succeed check_point")
+		}
+
+		if storage.inMemoryStorage.pollData.NextCheckPoint.Before(*storage.inMemoryStorage.pollData.ToDate) {
+			return nil, fmt.Errorf("next_check_point date must succeed or be equal to to_date")
+		}
+	}
 
 	logger.Info("loaded persistent configuration", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
 

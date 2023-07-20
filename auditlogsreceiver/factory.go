@@ -78,6 +78,6 @@ func newRestyClient(cfg *Config) *resty.Client {
 		SetHeader("Content-Type", "application/json").
 		SetRetryCount(1).
 		SetTimeout(time.Second*10).
-		SetBaseURL(strings.TrimSuffix(cfg.Url, "/")+"/v1/audit").
-		SetHeader("X-API-Key", cfg.Token)
+		SetBaseURL(strings.TrimSuffix(cfg.API.Url, "/")+"/v1/audit").
+		SetHeader("X-API-Key", cfg.API.Key)
 }

@@ -8,36 +8,43 @@ import (
 	"go.opentelemetry.io/collector/component"
 )
 
+type API struct {
+	Url string `mapstructure:"url"`
+	Key string `mapstructure:"key"`
+}
+
 // Config defines the configuration for the TCP stats receiver.
 type Config struct {
-	Url             string                 `mapstructure:"castai_api_url"`
-	Token           string                 `mapstructure:"castai_api_token"`
-	PollIntervalSec int                    `mapstructure:"castai_poll_interval_sec"`
-	PageLimit       int                    `mapstructure:"castai_page_limit"`
-	Storage         map[string]interface{} `mapstructure:"castai_storage"`
+	API             API                    `mapstructure:"api"`
+	PollIntervalSec int                    `mapstructure:"poll_interval_sec"`
+	PageLimit       int                    `mapstructure:"page_limit"`
+	Storage         map[string]interface{} `mapstructure:"storage"`
 }
 
 func newDefaultConfig() component.Config {
 	// Default parameters.
 	return &Config{
-		Url:             "https://api.cast.ai",
+		API: API{
+			Url: "https://api.cast.ai",
+			Key: "",
+		},
 		PollIntervalSec: 10,
 		PageLimit:       100,
 	}
 }
 
 func (c Config) Validate() error {
-	if c.Url == "" {
+	if c.API.Url == "" {
 		return errors.New("api url must be specified")
 	}
 
-	_, err := url.ParseRequestURI(c.Url)
+	_, err := url.ParseRequestURI(c.API.Url)
 	if err != nil {
 		return errors.New("api url must be in the form of <scheme>://<hostname>:<port>")
 	}
 
-	if c.Token == "" {
-		return errors.New("api token cannot be empty")
+	if c.API.Key == "" {
+		return errors.New("api access key cannot be empty")
 	}
 
 	if c.PollIntervalSec <= 0 {

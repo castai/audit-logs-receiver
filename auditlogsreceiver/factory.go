@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
@@ -57,17 +58,24 @@ func newStorage(logger *zap.Logger, cfg *Config) (storage.Storage, error) {
 	// Configuration validation is done in config.validate method, so it is safe to use configuration without validations here.
 	storageType := cfg.Storage["type"].(string)
 
+	// TODO: Consider reuse with config.go
 	switch storageType {
 	case "in-memory":
-		backFromNowSec := 0
-		b, ok := cfg.Storage["back_from_now_sec"].(int)
-		if ok {
-			backFromNowSec = b
+		var storageConfig InMemoryStorageConfig
+		err := mapstructure.Decode(cfg.Storage, &storageConfig)
+		if err != nil {
+			return nil, fmt.Errorf("decoding in-memory storage configuration: %w", err)
 		}
 
-		return storage.NewInMemoryStorage(logger, backFromNowSec), nil
+		return storage.NewInMemoryStorage(logger, storageConfig.BackFromNowSec), nil
 	case "persistent":
-		return storage.NewPersistentStorage(logger, cfg.Storage["filename"].(string))
+		var storageConfig PersistentStorageConfig
+		err := mapstructure.Decode(cfg.Storage, &storageConfig)
+		if err != nil {
+			return nil, fmt.Errorf("decoding persistent storage configuration: %w", err)
+		}
+
+		return storage.NewPersistentStorage(logger, storageConfig.Filename)
 	default:
 		return nil, fmt.Errorf("invalid storage type provided for audit logs exporter: %v", storageType)
 	}

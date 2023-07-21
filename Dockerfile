@@ -5,8 +5,8 @@ RUN mkdir -p /tmp
 ARG USER_UID=10001
 USER ${USER_UID}
 
-COPY collector-console-config.yaml /etc/otel/config.yaml
-COPY ../../collector-console/castai-collector-console /
+COPY collector-config.yaml /etc/otel/config.yaml
+COPY castai-collector/castai-collector /
 EXPOSE 4317 55680 55679
-ENTRYPOINT ["/castai-collector-console"]
+ENTRYPOINT ["/castai-collector"]
 CMD ["--config", "/etc/otel/config.yaml"]

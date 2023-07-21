@@ -9,11 +9,11 @@ audit-logs-metadata:
 
 .PHONY: build - Generate and build collector
 build: audit-logs-metadata
-	$(BUILD_ARGS) builder --config builder-config-console.yaml
+	$(BUILD_ARGS) builder --config builder-config.yaml
 
 .PHONY: run - Run a default collector that outputs everything to console
 run:
-	./collector-console/castai-collector-console --config collector-console-config.yaml
+	./castai-collector/castai-collector --config collector-config.yaml
 
 .PHONY: build-and-run - Run a default collector that outputs everything to console
 build-and-run: build run
@@ -21,28 +21,36 @@ build-and-run: build run
 .PHONY: docker - Build docker image and storing it locally
 docker: BUILD_ARGS:=GOOS=linux
 docker: build
-	docker build -t castai-collector-console .
+	docker build -t castai-collector .
 
 .PHONY: run-docker - Launch local docker image
 run-docker: docker
-	docker run castai-collector-console:latest
-
-.PHONY: build - Generate and build collector meant to export Audit Logs to Grafana Loki
-build-loki: audit-logs-metadata
-	$(BUILD_ARGS) builder --config ./examples/loki/builder-config.yaml
+	docker run castai-collector:latest
 
 .PHONY: run-loki - Run a collector that exports Audit Logs to Grafana Loki
 run-loki:
-	./examples/loki/collector-loki/castai-collector-loki --config ./examples/loki/collector-config.yaml
+	./castai-collector/castai-collector --config ./examples/loki/collector-config.yaml
+
+.PHONY: start-loki - Start Grafana Loki via docker compose
+start-loki:
+	docker-compose -f examples/loki/docker-compose.yaml up -d 
+
+.PHONY: run-loki-demo - Run a collector that exports Audit Logs to Grafana Loki deployed with docker-compose
+run-loki-demo: start-loki run-loki
+
+.PHONY: run-coralogix - Run a collector that exports Audit Logs to Grafana Loki
+run-loki:
+	./castai-collector/castai-collector --config ./examples/coralogix/collector-config.yaml
+
+.PHONY: run-file - Run a collector that exports Audit Logs to Grafana Loki
+run-loki:
+	./castai-collector/castai-collector --config ./examples/file/collector-config.yaml
 
 .PHONY: build-and-run-loki - Build and run a collector that exports Audit Logs to Grafana Loki
-build-and-run-loki: build-loki run-loki
+build-and-run-loki: build run-loki
 
-.PHONY: docker-loki - Build docker image and storing it locally
-docker-loki: BUILD_ARGS:=GOOS=linux
-docker-loki: build-loki
-	docker build -t castai-collector-loki ./examples/loki/.
+.PHONY: build-and-run-coralogix - Build and run a collector that exports Audit Logs to Coralogix
+build-and-run-loki: build run-coralogix
 
-.PHONY: run-docker - Launch local docker image
-run-docker-loki: docker-loki
-	docker run castai-collector-loki:latest
+.PHONY: build-and-run-file - Build and run a collector that exports Audit Logs to file
+build-and-run-loki: build run-file

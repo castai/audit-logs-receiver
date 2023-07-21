@@ -5,26 +5,17 @@ receivers:
     castai_poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
     castai_page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
     castai_storage:
-      type: "persistent"
-      filename: "./audit_logs_poll_data.json"
+      type: "in-memory"
+      back_from_now_sec: 3600
 
 exporters:
-  file:
-    path:           ./audit_logs.log
-    flush_interval: 100ms
-
-processors:
-
-extensions:
-  health_check:
+  logging:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
 
 service:
-  extensions: [health_check]
-  telemetry:
-    logs:
-      level: "debug"
   pipelines:
     logs:
       receivers: [castai-audit-logs]
-      processors: []
-      exporters: [file]
+      exporters: [logging]

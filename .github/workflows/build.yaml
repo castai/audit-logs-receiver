@@ -35,7 +35,7 @@ jobs:
         run: echo "RELEASE_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Prepare release
-        run: builder --skip-compilation --config examples/loki/builder-config.yaml 
+        run: builder --skip-compilation --config builder-config.yaml 
 
       - name: Build Go binary amd64
         run: go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o castai-collector

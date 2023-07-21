@@ -67,3 +67,14 @@ jobs:
           platforms: linux/arm64,linux/amd64
           push: ${{ github.event_name == 'pull_request' }}
           tags: ghcr.io/castai/otelcol-receiver:${{ github.sha }}
+
+      - name: Build and push release
+        if: github.event_name == 'release'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/castai/otelcol-receiver::${{ env.RELEASE_TAG }}
+            ghcr.io/castai/otelcol-receiver::latest

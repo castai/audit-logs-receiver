@@ -62,7 +62,7 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 	}
 
 	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
-		err = storage.inMemoryStorage.Save(PollData{
+		err = storage.Save(PollData{
 			CheckPoint:     time.Now().UTC(),
 			NextCheckPoint: nil,
 			ToDate:         nil,
@@ -91,9 +91,13 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 		return nil, fmt.Errorf("parsing poll data configuration file: %w", err)
 	}
 
-	// TODO: file content validation
+	// Format validation is done by JSON unmarshaller, so here it is only 'semantic' validations.
+	err = storage.validate()
+	if err != nil {
+		return nil, fmt.Errorf("validating poll data configuration file: %w", err)
+	}
 
-	logger.Info("loaded persistent configuration", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
+	logger.Info("loaded persistent storage configuration", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
 
 	return &storage, nil
 }
@@ -113,6 +117,27 @@ func (s *persistentStorage) Save(data PollData) error {
 	err = os.WriteFile(s.filename, jsonBytes, os.ModePerm)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *persistentStorage) validate() error {
+	if s.inMemoryStorage.pollData.NextCheckPoint != nil {
+		if s.inMemoryStorage.pollData.ToDate == nil {
+			return fmt.Errorf("to_date must be provided when next_check_point date is present")
+		}
+
+		if s.inMemoryStorage.pollData.NextCheckPoint.Before(s.inMemoryStorage.pollData.CheckPoint) {
+			return fmt.Errorf("next_check_point date must succeed check_point")
+		}
+		if s.inMemoryStorage.pollData.ToDate.Before(s.inMemoryStorage.pollData.CheckPoint) {
+			return fmt.Errorf("to_date date must succeed check_point")
+		}
+
+		if s.inMemoryStorage.pollData.NextCheckPoint.Before(*s.inMemoryStorage.pollData.ToDate) {
+			return fmt.Errorf("next_check_point date must succeed or be equal to to_date")
+		}
 	}
 
 	return nil

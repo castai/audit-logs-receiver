@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/component"
 )
 
@@ -19,6 +20,14 @@ type Config struct {
 	PollIntervalSec int                    `mapstructure:"poll_interval_sec"`
 	PageLimit       int                    `mapstructure:"page_limit"`
 	Storage         map[string]interface{} `mapstructure:"storage"`
+}
+
+type InMemoryStorageConfig struct {
+	BackFromNowSec int `mapstructure:"back_from_now_sec"`
+}
+
+type PersistentStorageConfig struct {
+	Filename string `mapstructure:"filename"`
 }
 
 func newDefaultConfig() component.Config {
@@ -51,9 +60,8 @@ func (c Config) Validate() error {
 		return errors.New("poll interval must be positive number")
 	}
 
-	// Capping to 1000 records per page which is max supported by the backend.
-	if c.PageLimit > 1000 {
-		c.PageLimit = 1000
+	if c.PageLimit < 10 || 1000 < c.PageLimit {
+		return errors.New("page limit must be within 10...1000 interval")
 	}
 
 	// Validating storage configuration based on its type.
@@ -66,26 +74,22 @@ func (c Config) Validate() error {
 		return errors.New("invalid storage type")
 	}
 
-	// TODO: values may be empty
 	switch storageType {
 	case "in-memory":
-		// This is an optional parameter.
-		b, ok := c.Storage["back_from_now_sec"]
-		if ok {
-			_, ok = b.(int)
-			if !ok {
-				return fmt.Errorf("invalid back_from_now_sec type")
-			}
+		var storageConfig InMemoryStorageConfig
+		err = mapstructure.Decode(c.Storage, &storageConfig)
+		if err != nil {
+			return fmt.Errorf("decoding in-memory storage configuration: %w", err)
 		}
 	case "persistent":
-		filename, ok := c.Storage["filename"]
-		if !ok {
-			return fmt.Errorf("filename is missing in persistent storage configuration")
+		var storageConfig PersistentStorageConfig
+		err = mapstructure.Decode(c.Storage, &storageConfig)
+		if err != nil {
+			return fmt.Errorf("decoding persistent storage configuration: %w", err)
 		}
 
-		_, ok = filename.(string)
-		if !ok {
-			return fmt.Errorf("invalid filename type in persistent storage configuration")
+		if storageConfig.Filename == "" {
+			return fmt.Errorf("file name must be provided in persistent storage configuration")
 		}
 	default:
 		return errors.New("unsupported storage type provided")

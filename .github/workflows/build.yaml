@@ -38,7 +38,7 @@ jobs:
         run: builder --skip-compilation --config examples/loki/builder-config.yaml 
 
       - name: Build Go binary amd64
-        run: cd examples/loki/collector-loki/ && go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o castai-collector-loki
+        run: go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o castai-collector
         env:
           GOOS: linux
           GOARCH: amd64
@@ -62,8 +62,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: docker/build-push-action@v2
         with:
-          context: ./examples/loki/
-          file: ./examples/loki/Dockerfile
+          context: .
           platforms: linux/arm64,linux/amd64
           push: ${{ github.event_name == 'pull_request' }}
           tags: ghcr.io/castai/otelcol-receiver:${{ github.sha }}

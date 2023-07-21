@@ -3,21 +3,17 @@ receivers:
     castai_api_url:           ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
     castai_api_token:         ${env:CASTAI_API_TOKEN} # Use CASTAI_API_TOKEN env variable to provide token
     castai_poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
-    castai_page_limit:        10 # This parameter defines the max number of records returned from the backend in one page.
+    castai_page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
     castai_storage:
-      type: "in-memory"
-      back_from_now_sec: 3600
+      type: "persistent"
+      filename: "./audit_logs_poll_data.json"
 
 exporters:
-  loki:
-    endpoint: http://localhost:3100/loki/api/v1/push
+  file:
+    path:           ./audit_logs.log
+    flush_interval: 100ms
 
 processors:
-  attributes: 
-    actions:
-      - action: insert
-        key: loki.attribute.labels
-        value: id, initiatedBy, eventType, labels.ClusterId
 
 service:
   telemetry:
@@ -26,5 +22,5 @@ service:
   pipelines:
     logs:
       receivers: [castai-audit-logs]
-      processors: [attributes]
-      exporters: [loki]
+      processors: []
+      exporters: [file]

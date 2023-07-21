@@ -24,9 +24,6 @@ apiKeySecretRef: ""
 # annotations to add to all resources
 commonAnnotations: {}
 
-# Specifies whether a namespace should be created
-createNamespace: true
-
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -80,6 +77,18 @@ configMap:
 # Host networking requested for this pod. Use the host's network namespace.
 hostNetwork: false
 
+## Persist collector state to a persistent volume
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 50M
+  annotations: {}
+
+statefulset:
+  podManagementPolicy: "Parallel"
+
+## OpenTelemetry Collector configuration, https://opentelemetry.io/docs/collector/configuration/
 config:
   receivers:
     castai-audit-logs:
@@ -92,15 +101,10 @@ config:
         filename: "/var/lib/otelcol/file_storage/audit_logs_poll_data.json"
 
   exporters:
-    loki:
-      endpoint: http://localhost:3100/loki/api/v1/push
-
-  processors:
-    attributes:
-      actions:
-        - action: insert
-          key: loki.attribute.labels
-          value: log.file.name
+    logging:
+      verbosity: detailed
+      sampling_initial: 5
+      sampling_thereafter: 200
 
   extensions:
     health_check: {}
@@ -113,16 +117,4 @@ config:
     pipelines:
       logs:
         receivers: [castai-audit-logs]
-        processors: [attributes]
-        exporters: [loki]
-
-## Persist collector state to a persistent volume
-persistence:
-  enabled: true
-  storageClass: ""
-  accessMode: ReadWriteOnce
-  size: 50M
-  annotations: {}
-
-statefulset:
-  podManagementPolicy: "Parallel"
+        exporters: [logging]

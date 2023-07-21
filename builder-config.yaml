@@ -1,7 +1,7 @@
 dist:
-  name: castai-collector-console
+  name: castai-collector
   description: CAST AI OTel Collector that outputs Audit Logs to the console
-  output_path: ./collector-console
+  output_path: ./castai-collector
   otelcol_version: 0.80.0
 
 receivers:
@@ -14,9 +14,14 @@ extensions:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.80.0
 
 processors:
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.80.0
 
 exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.80.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.80.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.80.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/coralogixexporter v0.80.0
+  
 
 replaces:
   # Override Lokiexporter dependencies.

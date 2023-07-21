@@ -13,12 +13,13 @@ replicaCount: 1
 # URL to the API server
 apiURL: "https://api.cast.ai"
 
-# Token to be used for authorizing agent access to the API
+# API Access Key to be used for authorizing agent access to the API
 apiKey: ""
 
-# Name of secret with Token to be used for authorizing agent access to the API
+# Name of k8s secret with API Access Key
 # apiKey and apiKeySecretRef are mutually exclusive
-# The referenced secret must provide the token in .data["API_KEY"]
+# The referenced secret must provide the access key in .data["API_KEY"]
+# TODO: test
 apiKeySecretRef: ""
 
 # annotations to add to all resources
@@ -48,6 +49,7 @@ securityContext: {}
 
 resources: {}
 
+# TODO: is it used?
 autoscaling:
   enabled: false
   minReplicas: 1
@@ -92,11 +94,12 @@ statefulset:
 config:
   receivers:
     castai-audit-logs:
-      castai_api_url:           ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
-      castai_api_token:         ${env:CASTAI_API_TOKEN} # Use CASTAI_API_TOKEN env variable to provide token
-      castai_poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
-      castai_page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
-      castai_storage:
+      api:
+        url:             ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
+        key:             ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key
+      poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
+      page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
+      storage:
         type: "persistent"
         filename: "/var/lib/otelcol/file_storage/audit_logs_poll_data.json"
 

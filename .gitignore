@@ -21,4 +21,4 @@ go.work.sum
 *.log
 *.json
 .idea
-collector-*/
+castai-collector*/

@@ -122,7 +122,7 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 				if err != nil {
 					return err
 				}
-				return fmt.Errorf("invalid api token, response code: %d", resp.StatusCode())
+				return fmt.Errorf("invalid api access key, response code: %d", resp.StatusCode())
 			default:
 				a.logger.Warn("unexpected response from audit logs api:", zap.Any("response_code", resp.StatusCode()))
 				return fmt.Errorf("got non 200 status code %d", resp.StatusCode())

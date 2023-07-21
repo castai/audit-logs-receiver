@@ -39,20 +39,21 @@ func TestInMemoryStorage(t *testing.T) {
 	t.Run("when new poll data is set by calling Save method then Get provides correct data", func(t *testing.T) {
 		r := require.New(t)
 
+		p := PollData{
+			CheckPoint:     time.Now().UTC(),
+			NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
+			ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+		}
 		s := persistentStorage{
 			inMemoryStorage: inMemoryStorage{
-				logger: nil,
-				pollData: PollData{
-					CheckPoint:     time.Now().UTC(),
-					NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
-					ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
-				},
+				logger:   nil,
+				pollData: p,
 			},
 		}
 
 		err := s.validate()
 		r.NoError(err)
-		//r.Equal(p, s.Get())
+		r.Equal(p, s.Get())
 	})
 }
 

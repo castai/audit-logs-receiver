@@ -37,13 +37,16 @@ func NewAuditLogsReceiver(
 		return nil, fmt.Errorf("invalid configuration type")
 	}
 
+	// This is where logger may be adjusted if needed.
+	logger := settings.Logger
+
 	st, err := newStorage(settings.Logger, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("creating storage: %w", err)
 	}
 
 	return &auditLogsReceiver{
-		logger:       settings.Logger,
+		logger:       logger,
 		pollInterval: time.Second * time.Duration(cfg.PollIntervalSec),
 		pageLimit:    cfg.PageLimit,
 		wg:           &sync.WaitGroup{},

@@ -60,9 +60,8 @@ func (c Config) Validate() error {
 		return errors.New("poll interval must be positive number")
 	}
 
-	// Capping to 1000 records per page which is max supported by the backend.
-	if c.PageLimit > 1000 {
-		c.PageLimit = 1000
+	if c.PageLimit < 10 || 1000 < c.PageLimit {
+		return errors.New("page limit must be within 10...1000 interval")
 	}
 
 	// Validating storage configuration based on its type.

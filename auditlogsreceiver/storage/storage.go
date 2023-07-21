@@ -93,6 +93,9 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 
 	// Format validation is done by JSON unmarshaller, so here it is only 'semantic' validations.
 	err = storage.validate()
+	if err != nil {
+		return nil, fmt.Errorf("validating poll data configuration file: %w", err)
+	}
 
 	logger.Info("loaded persistent storage configuration", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
 

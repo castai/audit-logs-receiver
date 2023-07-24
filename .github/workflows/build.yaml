@@ -65,7 +65,7 @@ jobs:
           context: .
           platforms: linux/arm64,linux/amd64
           push: ${{ github.event_name == 'pull_request' }}
-          tags: ghcr.io/castai/otelcol-receiver:${{ github.sha }}
+          tags: ghcr.io/castai/audit-logs-receiver:${{ github.sha }}
 
       - name: Build and push release
         if: github.event_name == 'release'
@@ -75,5 +75,5 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ghcr.io/castai/otelcol-receiver::${{ env.RELEASE_TAG }}
-            ghcr.io/castai/otelcol-receiver::latest
+            ghcr.io/castai/audit-logs-receiver::${{ env.RELEASE_TAG }}
+            ghcr.io/castai/audit-logs-receiver::latest

@@ -25,14 +25,14 @@ make setup
 
 It installs:
 - [Open Telemetry Metadata Generator](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/cmd/mdatagen) -
-it is used to generate receiver's definition (metadata about receiver itself); for example, stability level, is this a logs or metrics receiver, etc. Audit Logs Exporter's [metadata is defined here](./auditlogsreceiver/metadata.yaml).
-- [Open Telemetry Collector Builder](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/builder) - 
-builder is required to generate a code that bootstraps selected components so compilation may produce an executable binary. Builder's [configuration is defined here](./builder-config.yaml)
+  required to generate receiver's definition (metadata about receiver itself); for example, stability level, is this a logs or metrics receiver, etc. Audit Logs Exporter's [metadata is defined here](./auditlogsreceiver/metadata.yaml).
+- [Open Telemetry Collector Builder](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/builder) -
+  required to generate a code that bootstraps selected components so compilation may produce an executable binary. Builder's [configuration is defined here](./builder-config.yaml)
 
-Collector can be customized (what gets included in binary artifact) as needed by tailoring `builder-config.yaml` if needed.
+Collector can be customized (what gets included in a binary artifact) as needed by tailoring `builder-config.yaml`.
 Refer to OpenTelemetry Collector Contrib Distro's (for example, [the manifest](https://github.com/open-telemetry/opentelemetry-collector-releases/blob/main/distributions/otelcol-contrib/manifest.yaml) for a full list of available components.
 
-### Building and running a custom Controller
+### Building and running an executable artifact
 
 Building a custom Collector is as simple as:
 ```
@@ -45,31 +45,30 @@ To run the newly built binary, use:
 ./castai-collector/castai-collector --config collector-config.yaml
 ```
 
-or instead it can be run as make target:
+It can also be executed by using a make target:
 ```
 make run
 ```
 
-### Build and run the Docker Image
-Build the Docker image with:
+### Building and running as Docker container
+Both building and running are support by Make targets and can be run as:
 ```
-make docker
-```
-Run the Docker image with:
-```
-docker run -v $(pwd)/collector-config.yaml:/etc/otel/config.yaml otelcollector-castai:latest
-```
-### Docker Compose to test sending logs to Loki 
-Docker Compose exposes the following Grafana with Loki backend at http://0.0.0.0:3000
-
-```
-docker-compose -f docker-compose.yaml up -d
+make docker run-docker
 ```
 
-## Community
+There is one additional Make target to start Grafana with Loki (available via http://0.0.0.0:3000),
+which may be useful if logs are exported to this destination.
+In this scenario, one would start Loki first before running custom Collector:
+```
+make run-loki-server
+```
 
-- [Twitter](https://twitter.com/cast_ai)
-- [Discord](https://discord.gg/4sFCFVJ)
+### Helm Chart Support
+A custom collector with Audit Logs receiver may be hosted on Kubernetes,
+so to facilitate that the repository contains a [Helm Chart](./charts).
+
+One important aspect of hosting this collector on Kubernetes is that it is deployed as StatefulSet and uses PersistentVolumeClaim for storing data about fetching Audit Logs.
+This data is required to ensure that all Audit Logs are collected even in case when Collector's pod got restarted.
 
 ## License
 

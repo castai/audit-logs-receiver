@@ -15,9 +15,8 @@ build: audit-logs-metadata
 run:
 	./castai-collector/castai-collector --config collector-config.yaml
 
-.PHONY: build-and-run - Run a default collector that outputs everything to console
-build-and-run: build run
-
+# =======================
+# Docker related targets.
 .PHONY: docker - Build docker image and storing it locally
 docker: BUILD_ARGS:=GOOS=linux
 docker: build
@@ -27,30 +26,24 @@ docker: build
 run-docker: docker
 	docker run castai-collector:latest
 
+# ==================================================
+# Targets to run an example that uses file exporter.
+.PHONY: run-file - Run a collector that exports Audit Logs to Grafana Loki
+run-file:
+	./castai-collector/castai-collector --config ./examples/file/collector-config.yaml
+
+# ==================================================
+# Targets to run an example that uses Loki exporter.
+.PHONY: run-loki-server - Start Grafana Loki via docker compose
+run-loki-server:
+	docker-compose -f examples/loki/docker-compose.yaml up -d
+
 .PHONY: run-loki - Run a collector that exports Audit Logs to Grafana Loki
 run-loki:
 	./castai-collector/castai-collector --config ./examples/loki/collector-config.yaml
 
-.PHONY: start-loki - Start Grafana Loki via docker compose
-start-loki:
-	docker-compose -f examples/loki/docker-compose.yaml up -d 
-
-.PHONY: run-loki-demo - Run a collector that exports Audit Logs to Grafana Loki deployed with docker-compose
-run-loki-demo: start-loki run-loki
-
+# =======================================================
+# Targets to run an example that uses Coralogix exporter.
 .PHONY: run-coralogix - Run a collector that exports Audit Logs to Grafana Loki
-run-loki:
+run-coralogix:
 	./castai-collector/castai-collector --config ./examples/coralogix/collector-config.yaml
-
-.PHONY: run-file - Run a collector that exports Audit Logs to Grafana Loki
-run-loki:
-	./castai-collector/castai-collector --config ./examples/file/collector-config.yaml
-
-.PHONY: build-and-run-loki - Build and run a collector that exports Audit Logs to Grafana Loki
-build-and-run-loki: build run-loki
-
-.PHONY: build-and-run-coralogix - Build and run a collector that exports Audit Logs to Coralogix
-build-and-run-loki: build run-coralogix
-
-.PHONY: build-and-run-file - Build and run a collector that exports Audit Logs to file
-build-and-run-loki: build run-file

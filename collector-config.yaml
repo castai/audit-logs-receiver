@@ -6,8 +6,8 @@ receivers:
     poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
     page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
     storage:
-      type: "in-memory"
-      back_from_now_sec: 3600
+      type: "persistent"
+      filename: "./audit_logs_poll_data.json"
 
 exporters:
   logging:

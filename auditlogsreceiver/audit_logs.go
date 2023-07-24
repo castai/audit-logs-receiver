@@ -83,7 +83,7 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 
 	// ToDate is present when exporter is restarted in the middle of pagination; ToDate is shifted with every page.
 	if pollData.ToDate == nil {
-		pollData.ToDate = lo.ToPtr(time.Now().UTC())
+		pollData.ToDate = lo.ToPtr(time.Now())
 		pollData.NextCheckPoint = pollData.ToDate
 
 		// Saving state as here fromDate and toDate are known.
@@ -101,8 +101,8 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		if queryParams == nil {
 			queryParams = map[string]string{
 				"page.limit": strconv.Itoa(a.pageLimit),
-				"toDate":     pollData.ToDate.Format(timestampLayout),
-				"fromDate":   pollData.CheckPoint.Format(timestampLayout),
+				"toDate":     pollData.ToDate.UTC().Format(timestampLayout),
+				"fromDate":   pollData.CheckPoint.UTC().Format(timestampLayout),
 			}
 		}
 
@@ -132,6 +132,11 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		auditLogsMap, lastAuditLogTimestamp, err := a.processResponseBody(ctx, resp.Body())
 		if err != nil {
 			return err
+		}
+
+		// if lastAuditLogTimestamp is not returned, then there were no valid items found in the response
+		if lastAuditLogTimestamp == nil {
+			break
 		}
 
 		// Shifting ToDate towards the current check point with every processed page.
@@ -245,7 +250,7 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 		}
 		lastAuditLogTimestamp = &auditLogTimestamp
 
-		observedTime := pcommon.NewTimestampFromTime(time.Now().UTC())
+		observedTime := pcommon.NewTimestampFromTime(time.Now())
 		logRecord.SetObservedTimestamp(observedTime)
 		logRecord.SetTimestamp(pcommon.NewTimestampFromTime(auditLogTimestamp))
 	}

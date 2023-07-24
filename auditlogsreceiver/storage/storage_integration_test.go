@@ -19,9 +19,9 @@ func TestPersistentStorage(t *testing.T) {
 		r := require.New(t)
 
 		p := PollData{
-			CheckPoint:     time.Now().UTC(),
-			NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
-			ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+			CheckPoint:     time.Now(),
+			NextCheckPoint: lo.ToPtr(time.Now().Add(2 * time.Second)),
+			ToDate:         lo.ToPtr(time.Now().Add(1 * time.Second)),
 		}
 		jsonBytes, err := json.Marshal(&p)
 		r.NoError(err)
@@ -36,7 +36,10 @@ func TestPersistentStorage(t *testing.T) {
 
 		s, err := NewPersistentStorage(logger, filename)
 		r.NoError(err)
-		r.Equal(p, s.Get())
+
+		r.WithinDuration(p.CheckPoint, s.Get().CheckPoint, 0)
+		r.WithinDuration(*p.ToDate, *s.Get().ToDate, 0)
+		r.WithinDuration(*p.NextCheckPoint, *s.Get().NextCheckPoint, 0)
 	})
 
 	t.Run("when no file is present then a new one is created and Get provides correct data", func(t *testing.T) {
@@ -50,8 +53,8 @@ func TestPersistentStorage(t *testing.T) {
 		}()
 
 		p := s.Get()
-		r.True(p.CheckPoint.Before(time.Now().UTC()))
-		r.True(p.CheckPoint.After(time.Now().UTC().Add(-100 * time.Millisecond)))
+		r.True(p.CheckPoint.Before(time.Now()))
+		r.True(p.CheckPoint.After(time.Now().Add(-100 * time.Millisecond)))
 
 		jsonFile, err := os.Open(filename)
 		r.NoError(err)

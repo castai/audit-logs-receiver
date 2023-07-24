@@ -75,5 +75,5 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ghcr.io/castai/audit-logs-receiver::${{ env.RELEASE_TAG }}
-            ghcr.io/castai/audit-logs-receiver::latest
+            ghcr.io/castai/audit-logs-receiver:${{ env.RELEASE_TAG }}
+            ghcr.io/castai/audit-logs-receiver:latest

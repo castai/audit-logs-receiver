@@ -177,8 +177,8 @@ func TestPoll(t *testing.T) {
 		r := require.New(t)
 		ctx := context.Background()
 		checkPointTimestamp := time.Now().Add(-10 * time.Second)
-		firstPageLastLogTimestamp := time.Now().Add(-9 * time.Second)
-		secondPageLastLogTimestamp := time.Now().Add(-8 * time.Second)
+		firstPageLastLogTimestamp := time.Now().Add(-7 * time.Second)
+		secondPageLastLogTimestamp := time.Now().Add(-9 * time.Second)
 		cursorData := uuid.NewString()
 
 		mockCtrl := gomock.NewController(t)

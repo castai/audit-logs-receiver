@@ -89,14 +89,14 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		pollData.ToDate = lo.ToPtr(time.Now())
 		pollData.NextCheckPoint = pollData.ToDate
 
-		// Saving state as here fromDate and toDate are known.
+		// Saving state, as fromDate and toDate are fixed from now on.
 		err := a.storage.Save(pollData)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Dumping content of the Audit Logs to console.
+	// Logging polling data, which is helpful for debugging.
 	a.logger.Debug("polling for audit logs", zap.Any("poll_data", pollData))
 
 	var queryParams map[string]string
@@ -219,7 +219,7 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 			continue
 		}
 
-		// Dumping content of the Audit Logs to console.
+		// Dumping content of the Audit Logs to the console.
 		a.logger.Info("processing new audit log", zap.Any("data", item))
 
 		attributesMap := map[string]interface{}{

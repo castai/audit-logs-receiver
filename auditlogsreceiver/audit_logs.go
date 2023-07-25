@@ -21,6 +21,9 @@ import (
 )
 
 const (
+	// Important note: backend prefers timestamps in UTC, hence the layout; in case
+	// this format is applied for timestamps based on time.Now() then UTC location must be
+	// specified (for example: tm := time.Now().UTC().Format(timestampLayout))
 	timestampLayout = "2006-01-02T15:04:05.999999Z"
 )
 
@@ -61,7 +64,16 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		err := a.poll(ctx, cancel)
+		err := a.poll(ctx, func() {
+			// Stop function is called in case of critical errors (error that cannot be restored from).
+			cancel()
+
+			// TODO: reconsider this approach based on Open Telemetry practices.
+			err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+			if err != nil {
+				a.logger.Error("sending sigterm signal", zap.Error(err))
+			}
+		})
 		if err != nil {
 			a.logger.Error("there was an error during the poll", zap.Error(err))
 		}
@@ -77,23 +89,23 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 	}
 }
 
-func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc) error {
+func (a *auditLogsReceiver) poll(ctx context.Context, stopFunc func()) error {
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
 	pollData := a.storage.Get()
 
 	// ToDate is present when exporter is restarted in the middle of pagination; ToDate is shifted with every page.
 	if pollData.ToDate == nil {
-		pollData.ToDate = lo.ToPtr(time.Now().UTC())
+		pollData.ToDate = lo.ToPtr(time.Now())
 		pollData.NextCheckPoint = pollData.ToDate
 
-		// Saving state as here fromDate and toDate are known.
+		// Saving state, as fromDate and toDate are fixed from now on.
 		err := a.storage.Save(pollData)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Dumping content of the Audit Logs to console.
+	// Logging polling data, which is helpful for debugging.
 	a.logger.Debug("polling for audit logs", zap.Any("poll_data", pollData))
 
 	var queryParams map[string]string
@@ -101,8 +113,8 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		if queryParams == nil {
 			queryParams = map[string]string{
 				"page.limit": strconv.Itoa(a.pageLimit),
-				"toDate":     pollData.ToDate.Format(timestampLayout),
-				"fromDate":   pollData.CheckPoint.Format(timestampLayout),
+				"toDate":     pollData.ToDate.UTC().Format(timestampLayout),
+				"fromDate":   pollData.CheckPoint.UTC().Format(timestampLayout),
 			}
 		}
 
@@ -116,12 +128,8 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		if resp.StatusCode() > 399 {
 			switch resp.StatusCode() {
 			case 401, 403:
-				// Shutdown collector if unable to authenticate to the api.
-				cancel()
-				err = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-				if err != nil {
-					return err
-				}
+				// Authentication error is treated as critical error hence calling a stop function.
+				stopFunc()
 				return fmt.Errorf("invalid api access key, response code: %d", resp.StatusCode())
 			default:
 				a.logger.Warn("unexpected response from audit logs api:", zap.Any("response_code", resp.StatusCode()))
@@ -132,6 +140,11 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		auditLogsMap, lastAuditLogTimestamp, err := a.processResponseBody(ctx, resp.Body())
 		if err != nil {
 			return err
+		}
+
+		// if lastAuditLogTimestamp is not returned, then there were no valid items found in the response
+		if lastAuditLogTimestamp == nil {
+			break
 		}
 
 		// Shifting ToDate towards the current check point with every processed page.
@@ -211,7 +224,7 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 			continue
 		}
 
-		// Dumping content of the Audit Logs to console.
+		// Dumping content of the Audit Logs to the console.
 		a.logger.Info("processing new audit log", zap.Any("data", item))
 
 		attributesMap := map[string]interface{}{
@@ -245,7 +258,7 @@ func (a *auditLogsReceiver) processAuditLogs(ctx context.Context, auditLogsMap m
 		}
 		lastAuditLogTimestamp = &auditLogTimestamp
 
-		observedTime := pcommon.NewTimestampFromTime(time.Now().UTC())
+		observedTime := pcommon.NewTimestampFromTime(time.Now())
 		logRecord.SetObservedTimestamp(observedTime)
 		logRecord.SetTimestamp(pcommon.NewTimestampFromTime(auditLogTimestamp))
 	}

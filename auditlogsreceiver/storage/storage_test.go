@@ -18,8 +18,8 @@ func TestInMemoryStorage(t *testing.T) {
 		s := NewInMemoryStorage(logger, backFromNow)
 
 		p := s.Get()
-		r.True(p.CheckPoint.Before(time.Now().UTC()))
-		r.True(p.CheckPoint.After(time.Now().UTC().Add(-time.Second*time.Duration(backFromNow) - 100*time.Millisecond)))
+		r.True(p.CheckPoint.Before(time.Now()))
+		r.True(p.CheckPoint.After(time.Now().Add(-time.Second*time.Duration(backFromNow) - 100*time.Millisecond)))
 	})
 
 	t.Run("when new poll data is set by calling Save method then Get provides correct data", func(t *testing.T) {
@@ -27,22 +27,24 @@ func TestInMemoryStorage(t *testing.T) {
 
 		s := NewInMemoryStorage(logger, 1)
 		p := PollData{
-			CheckPoint:     time.Now().UTC(),
-			NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
-			ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+			CheckPoint:     time.Now(),
+			NextCheckPoint: lo.ToPtr(time.Now().Add(2 * time.Second)),
+			ToDate:         lo.ToPtr(time.Now().Add(1 * time.Second)),
 		}
 		err := s.Save(p)
 		r.NoError(err)
-		r.Equal(p, s.Get())
+		r.WithinDuration(p.CheckPoint, s.Get().CheckPoint, 0)
+		r.WithinDuration(*p.ToDate, *s.Get().ToDate, 0)
+		r.WithinDuration(*p.NextCheckPoint, *s.Get().NextCheckPoint, 0)
 	})
 
 	t.Run("when new poll data is set by calling Save method then Get provides correct data", func(t *testing.T) {
 		r := require.New(t)
 
 		p := PollData{
-			CheckPoint:     time.Now().UTC(),
-			NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
-			ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+			CheckPoint:     time.Now(),
+			NextCheckPoint: lo.ToPtr(time.Now().Add(2 * time.Second)),
+			ToDate:         lo.ToPtr(time.Now().Add(1 * time.Second)),
 		}
 		s := persistentStorage{
 			inMemoryStorage: inMemoryStorage{
@@ -53,7 +55,9 @@ func TestInMemoryStorage(t *testing.T) {
 
 		err := s.validate()
 		r.NoError(err)
-		r.Equal(p, s.Get())
+		r.WithinDuration(p.CheckPoint, s.Get().CheckPoint, 0)
+		r.WithinDuration(*p.ToDate, *s.Get().ToDate, 0)
+		r.WithinDuration(*p.NextCheckPoint, *s.Get().NextCheckPoint, 0)
 	})
 }
 
@@ -72,7 +76,7 @@ func TestPersistentStorageValidate(t *testing.T) {
 			fields: fields{
 				inMemoryStorage: inMemoryStorage{
 					pollData: PollData{
-						CheckPoint: time.Now().UTC(),
+						CheckPoint: time.Now(),
 					},
 				},
 			},
@@ -83,9 +87,9 @@ func TestPersistentStorageValidate(t *testing.T) {
 			fields: fields{
 				inMemoryStorage: inMemoryStorage{
 					pollData: PollData{
-						CheckPoint:     time.Now().UTC(),
-						NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
-						ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+						CheckPoint:     time.Now(),
+						NextCheckPoint: lo.ToPtr(time.Now().Add(2 * time.Second)),
+						ToDate:         lo.ToPtr(time.Now().Add(1 * time.Second)),
 					},
 				},
 			},
@@ -96,8 +100,8 @@ func TestPersistentStorageValidate(t *testing.T) {
 			fields: fields{
 				inMemoryStorage: inMemoryStorage{
 					pollData: PollData{
-						CheckPoint:     time.Now().UTC(),
-						NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+						CheckPoint:     time.Now(),
+						NextCheckPoint: lo.ToPtr(time.Now().Add(1 * time.Second)),
 					},
 				},
 			},
@@ -108,9 +112,9 @@ func TestPersistentStorageValidate(t *testing.T) {
 			fields: fields{
 				inMemoryStorage: inMemoryStorage{
 					pollData: PollData{
-						CheckPoint:     time.Now().UTC().Add(3 * time.Second),
-						NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
-						ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+						CheckPoint:     time.Now().Add(3 * time.Second),
+						NextCheckPoint: lo.ToPtr(time.Now().Add(2 * time.Second)),
+						ToDate:         lo.ToPtr(time.Now().Add(1 * time.Second)),
 					},
 				},
 			},
@@ -121,9 +125,9 @@ func TestPersistentStorageValidate(t *testing.T) {
 			fields: fields{
 				inMemoryStorage: inMemoryStorage{
 					pollData: PollData{
-						CheckPoint:     time.Now().UTC().Add(2 * time.Second),
-						NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(3 * time.Second)),
-						ToDate:         lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
+						CheckPoint:     time.Now().Add(2 * time.Second),
+						NextCheckPoint: lo.ToPtr(time.Now().Add(3 * time.Second)),
+						ToDate:         lo.ToPtr(time.Now().Add(1 * time.Second)),
 					},
 				},
 			},
@@ -134,9 +138,9 @@ func TestPersistentStorageValidate(t *testing.T) {
 			fields: fields{
 				inMemoryStorage: inMemoryStorage{
 					pollData: PollData{
-						CheckPoint:     time.Now().UTC(),
-						NextCheckPoint: lo.ToPtr(time.Now().UTC().Add(1 * time.Second)),
-						ToDate:         lo.ToPtr(time.Now().UTC().Add(2 * time.Second)),
+						CheckPoint:     time.Now(),
+						NextCheckPoint: lo.ToPtr(time.Now().Add(1 * time.Second)),
+						ToDate:         lo.ToPtr(time.Now().Add(2 * time.Second)),
 					},
 				},
 			},

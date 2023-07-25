@@ -1,3 +1,4 @@
+//go:generate mockgen -source $GOFILE -destination mock/$GOFILE . Storage
 package storage
 
 import (
@@ -32,7 +33,7 @@ func NewInMemoryStorage(logger *zap.Logger, backFromNowSec int) Storage {
 	return &inMemoryStorage{
 		logger: logger,
 		pollData: PollData{
-			CheckPoint:     time.Now().UTC().Add(-time.Second * time.Duration(backFromNowSec)),
+			CheckPoint:     time.Now().Add(-time.Second * time.Duration(backFromNowSec)),
 			NextCheckPoint: nil,
 			ToDate:         nil,
 		},
@@ -55,6 +56,7 @@ type persistentStorage struct {
 
 func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) {
 	storage := persistentStorage{
+		// TODO: consider using NewInMemoryStorage(..), then no need for creating PollData when creating a file.
 		inMemoryStorage: inMemoryStorage{
 			logger: logger,
 		},
@@ -63,7 +65,7 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 
 	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
 		err = storage.Save(PollData{
-			CheckPoint:     time.Now().UTC(),
+			CheckPoint:     time.Now(),
 			NextCheckPoint: nil,
 			ToDate:         nil,
 		})

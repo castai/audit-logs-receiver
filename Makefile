@@ -1,3 +1,5 @@
+GOARCH := $(shell go env GOARCH)
+
 .PHONY: setup - Set up required tools (builder, mdatagen)
 setup:
 	go install go.opentelemetry.io/collector/cmd/builder@latest
@@ -20,7 +22,8 @@ run:
 .PHONY: docker - Build docker image and storing it locally
 docker: BUILD_ARGS:=GOOS=linux
 docker: build
-	docker build -t castai-collector .
+	cd castai-collector && go build -o castai-collector-$(GOARCH)
+	docker build -t castai-collector . 
 
 .PHONY: run-docker - Launch local docker image
 run-docker: docker

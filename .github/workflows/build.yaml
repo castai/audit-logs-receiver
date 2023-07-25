@@ -38,10 +38,17 @@ jobs:
         run: builder --skip-compilation --config builder-config.yaml 
 
       - name: Build Go binary amd64
-        run: cd castai-collector && go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o castai-collector
+        run: cd castai-collector && go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o castai-collector-amd64
         env:
           GOOS: linux
           GOARCH: amd64
+          CGO_ENABLED: 0
+
+      - name: Build Go binary arm64
+        run: cd castai-collector && go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o castai-collector-arm64
+        env:
+          GOOS: linux
+          GOARCH: arm64
           CGO_ENABLED: 0
 
       - name: Set up QEMU
@@ -73,7 +80,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: linux/arm64,linux/amd64
           tags: |
             ghcr.io/castai/audit-logs-receiver:${{ env.RELEASE_TAG }}
             ghcr.io/castai/audit-logs-receiver:latest

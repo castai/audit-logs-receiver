@@ -86,6 +86,8 @@ func newStorage(logger *zap.Logger, cfg *Config) (storage.Storage, error) {
 
 func newRestyClient(cfg *Config) *resty.Client {
 	return resty.New().
+		// TODO: look up version during build process
+		SetHeader("User-Agent", "castai/audit-logs-receiver/0.1.0").
 		SetHeader("Content-Type", "application/json").
 		SetRetryCount(1).
 		SetTimeout(time.Second*10).

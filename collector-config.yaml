@@ -11,11 +11,18 @@ receivers:
 
 exporters:
   logging:
-    verbosity: detailed
+    verbosity: basic
     sampling_initial: 5
     sampling_thereafter: 200
 
+extensions:
+  health_check:
+
 service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: "debug"
   pipelines:
     logs:
       receivers: [castai-audit-logs]

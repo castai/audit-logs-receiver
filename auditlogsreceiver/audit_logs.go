@@ -64,7 +64,16 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		err := a.poll(ctx, cancel)
+		err := a.poll(ctx, func() {
+			// Stop function is called in case of critical errors (error that cannot be restored from).
+			cancel()
+
+			// TODO: reconsider this approach based on Open Telemetry practices.
+			err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+			if err != nil {
+				a.logger.Error("sending sigterm signal", zap.Error(err))
+			}
+		})
 		if err != nil {
 			a.logger.Error("there was an error during the poll", zap.Error(err))
 		}
@@ -80,7 +89,7 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 	}
 }
 
-func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc) error {
+func (a *auditLogsReceiver) poll(ctx context.Context, stopFunc func()) error {
 	// It is OK to have long durations (to - from) as backend will handle it through pagination & page limit.
 	pollData := a.storage.Get()
 
@@ -119,12 +128,8 @@ func (a *auditLogsReceiver) poll(ctx context.Context, cancel context.CancelFunc)
 		if resp.StatusCode() > 399 {
 			switch resp.StatusCode() {
 			case 401, 403:
-				// Shutdown collector if unable to authenticate to the api.
-				cancel()
-				err = syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-				if err != nil {
-					return err
-				}
+				// Authentication error is treated as critical error hence calling a stop function.
+				stopFunc()
 				return fmt.Errorf("invalid api access key, response code: %d", resp.StatusCode())
 			default:
 				a.logger.Warn("unexpected response from audit logs api:", zap.Any("response_code", resp.StatusCode()))

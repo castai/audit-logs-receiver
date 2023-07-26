@@ -24,7 +24,7 @@ const (
 	// Important note: backend prefers timestamps in UTC, hence the layout; in case
 	// this format is applied for timestamps based on time.Now() then UTC location must be
 	// specified (for example: tm := time.Now().UTC().Format(timestampLayout))
-	timestampLayout = "2006-01-02T15:04:05.999999Z"
+	timestampLayout = "2006-01-02T15:04:05.999999999Z"
 )
 
 type auditLogsReceiver struct {

@@ -111,6 +111,7 @@ func newResponseWithTwoItem(lastLogTimestamp time.Time, cursorData string) strin
 }
 
 func defaultResponderWithAssertions(t *testing.T, data *storage.PollData, pageLimit int, body string) httpmock.Responder {
+	t.Helper()
 	r := require.New(t)
 
 	return func(req *http.Request) (*http.Response, error) {

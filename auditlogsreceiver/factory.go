@@ -14,8 +14,8 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/castai/otel-receivers/audit-logs/internal/metadata"
-	"github.com/castai/otel-receivers/audit-logs/storage"
+	"github.com/castai/audit-logs-receiver/audit-logs/internal/metadata"
+	"github.com/castai/audit-logs-receiver/audit-logs/storage"
 )
 
 func NewFactory() receiver.Factory {

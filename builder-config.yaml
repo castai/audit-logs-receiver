@@ -5,8 +5,8 @@ dist:
   otelcol_version: 0.80.0
 
 receivers:
-  - gomod: github.com/castai/otel-receivers/audit-logs v0.80.0
-    import: github.com/castai/otel-receivers/audit-logs
+  - gomod: github.com/castai/audit-logs-receiver/audit-logs v0.80.0
+    import: github.com/castai/audit-logs-receiver/audit-logs
     name: "auditlogsreceiver"
     path: "./auditlogsreceiver/"
 

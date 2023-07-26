@@ -1,4 +1,4 @@
-module github.com/castai/otel-receivers/audit-logs
+module github.com/castai/audit-logs-receiver/audit-logs
 
 go 1.20
 

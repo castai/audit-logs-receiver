@@ -90,7 +90,7 @@ func newRestyClient(cfg *Config) *resty.Client {
 		SetHeader("User-Agent", "castai/audit-logs-receiver/0.1.0").
 		SetHeader("Content-Type", "application/json").
 		SetRetryCount(1).
-		SetTimeout(time.Second*10).
+		SetTimeout(time.Minute).
 		SetBaseURL(strings.TrimSuffix(cfg.API.Url, "/")+"/v1/audit").
 		SetHeader("X-API-Key", cfg.API.Key)
 }

@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.uber.org/zap"
 
-	"github.com/castai/otel-receivers/audit-logs/storage"
+	"github.com/castai/audit-logs-receiver/audit-logs/storage"
 )
 
 const (

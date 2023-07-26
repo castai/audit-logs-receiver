@@ -2,15 +2,17 @@ package auditlogs
 
 import (
 	"context"
-	"github.com/castai/otel-receivers/audit-logs/storage"
-	"github.com/jarcoal/httpmock"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/plog"
 	"net/http"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/plog"
+
+	"github.com/castai/audit-logs-receiver/audit-logs/storage"
 )
 
 // This struct complying to an Open Telemetry consumer.Logs interface so rolling out a mock manually

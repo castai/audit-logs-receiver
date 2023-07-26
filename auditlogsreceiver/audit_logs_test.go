@@ -14,8 +14,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.uber.org/zap"
 
-	"github.com/castai/otel-receivers/audit-logs/storage"
-	mock_storage "github.com/castai/otel-receivers/audit-logs/storage/mock"
+	"github.com/castai/audit-logs-receiver/audit-logs/storage"
+	mock_storage "github.com/castai/audit-logs-receiver/audit-logs/storage/mock"
 )
 
 func TestPoll(t *testing.T) {

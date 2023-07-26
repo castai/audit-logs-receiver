@@ -7,7 +7,7 @@ package mock_storage
 import (
 	reflect "reflect"
 
-	storage "github.com/castai/otel-receivers/audit-logs/storage"
+	storage "github.com/castai/audit-logs-receiver/audit-logs/storage"
 	gomock "github.com/golang/mock/gomock"
 )
 

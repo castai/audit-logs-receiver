@@ -3,83 +3,74 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: ghcr.io/castai/audit-logs-receiver
+  repository: us-docker.pkg.dev/castai-hub/library/audit-logs-receiver
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
 replicaCount: 1
 
-# URL to the API server
+# URL to the API server.
 apiURL: "https://api.cast.ai"
 
-# API Access Key to be used for authorizing agent access to the API
+# API Access Key to be used for authorizing access to the API.
 apiKey: ""
 
-# Name of k8s secret with API Access Key
-# apiKey and apiKeySecretRef are mutually exclusive
-# The referenced secret must provide the access key in .data["API_KEY"]
-# TODO: test
+# Name of k8s secret with API Access Key.
+# apiKey and apiKeySecretRef are mutually exclusive.
+# The referenced secret must provide the access key in .data["CASTAI_API_KEY"].
 apiKeySecretRef: ""
 
-# annotations to add to all resources
+# Annotations to add to all resources.
 commonAnnotations: {}
 
 serviceAccount:
-  # Specifies whether a service account should be created
+  # Specifies whether a service account should be created.
   create: true
-  # Annotations to add to the service account
+  # Annotations to add to the service account.
   annotations: {}
   # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
+  # If not set and create is true, a name is generated using the fullname template.
   name: ""
 
+# Annotations to be added to pods.
 podAnnotations: {}
 
+# Pod security context.
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 podSecurityContext: {}
-  # fsGroup: 2000
 
+# Container security context.
+# Ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
 securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
 
+# Resource limits & requests.
 resources: {}
 
-# TODO: is it used?
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
-
-imagePullSecrets: {}
-
+# Pod node selector rules.
+# Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 nodeSelector: {}
 
+# Pod toleration rules.
+# Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
 tolerations: []
 
+# Pod affinity rules.
+# Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
 affinity: {}
 
 rollout:
   rollingUpdate: {}
-  # When 'mode: daemonset', maxSurge cannot be used when hostPort is set for any of the ports
-  # maxSurge: 25%
-  # maxUnavailable: 0
   strategy: RollingUpdate
 
 configMap:
-  # Specifies whether a configMap should be created (true by default)
+  # Specifies whether a configMap should be created (true by default).
   create: true
 
 # Host networking requested for this pod. Use the host's network namespace.
 hostNetwork: false
 
-## Persist collector state to a persistent volume
+## Persist collector state to a persistent volume.
 persistence:
   enabled: true
   storageClass: ""
@@ -90,13 +81,14 @@ persistence:
 statefulset:
   podManagementPolicy: "Parallel"
 
-## OpenTelemetry Collector configuration, https://opentelemetry.io/docs/collector/configuration/
+## OpenTelemetry Collector configuration.
+## Ref: https://opentelemetry.io/docs/collector/configuration/
 config:
   receivers:
     castai-audit-logs:
       api:
-        url:             ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
-        key:             ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key
+        url:             ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/).
+        key:             ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key.
       poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
       page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
       storage:
@@ -110,6 +102,9 @@ config:
       sampling_thereafter: 200
 
   extensions:
+    # The health_check extension is mandatory for this chart.
+    # Without the health_check extension the collector will fail the readiness and liveliness probes.
+    # The health_check extension can be modified, but should never be removed.
     health_check: {}
 
   service:

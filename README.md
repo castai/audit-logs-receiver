@@ -78,7 +78,7 @@ Example Helm install command with default [logging](https://github.com/open-tele
 ```bash
 helm install logs-receiver castai-helm/castai-audit-logs-receiver --namespace=castai-logs --create-namespace --set castai.apiKey=<api_key>,castai.apiURL="https://api.cast.ai"
 ```
-Example Helm install with loki configuration:
+Example Helm install with [loki configuration](./examples/loki/collector-config.yaml):
 ```bash
 # values.yaml
 config:

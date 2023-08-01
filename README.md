@@ -65,21 +65,35 @@ make run-loki-server
 
 ### Helm Chart Support
 A custom collector with Audit Logs receiver may be hosted on Kubernetes,
-so to facilitate that the repository contains a Helm Chart in [castai/helm-charts](https://github.com/castai/helm-charts) repo.
+so to facilitate that a Helm Chart is published in [castai/helm-charts](https://github.com/castai/helm-charts).
 
 One important aspect of hosting this collector on Kubernetes is that it is deployed as StatefulSet and uses PersistentVolumeClaim for storing data about fetching Audit Logs.
 This data is required to ensure that all Audit Logs are collected even in case when Collector's pod got restarted.
 
-Use `api_key` and `config` values to configure Helm releases:
-- Set `castai.apiKey` property to your `api_key`
-- Override `config` with preffered component configuration from [examples](./examples).
+### Usage
+[Helm](https://helm.sh) must be installed to use the charts.
+Please refer to Helm's [documentation](https://helm.sh/docs/) to get started.
 
-Example Helm install command with default [logging](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/loggingexporter) exporter:
-```bash
-helm install logs-receiver castai-helm/castai-audit-logs-receiver --namespace=castai-logs --create-namespace --set castai.apiKey=<api_key>,castai.apiURL="https://api.cast.ai"
+Once Helm is set up properly, add [castai/helm-charts](https://github.com/castai/helm-charts) repository as follows:
+
+```console
+helm repo add castai-helm https://castai.github.io/helm-charts
 ```
-Example Helm install with [loki configuration](./examples/loki/collector-config.yaml):
-```bash
+To install Audit Logs receiver's release:
+  * set `castai.apiKey` property to your CAST AI [API Access key](https://docs.cast.ai/docs/authentication#obtaining-api-access-key)
+  * deploy the chart:
+```shell
+helm install logs-receiver castai-helm/castai-audit-logs-receiver \ 
+  --namespace=castai-logs \
+  --create-namespace \ 
+  --set castai.apiKey=<api_access_key>
+  --set castai.apiURL="https://api.cast.ai"
+```
+Default installation uses [logging](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/loggingexporter) as main log exporter but this can be changed by overriding chart's `config` property with desired collector's pipeline setup.  `collector-config.yaml` files for different exporter setups can be found in [examples](./examples/) directory for both reference and to create `values.yaml` file to pass to Helm chart.
+
+Example Helm install with Loki configuration:
+  * create your custom `values.yaml` with pipeline setup from [./examples/loki/collector-config.yaml](./examples/loki/collector-config.yaml):  
+```shell
 # values.yaml
 config:
   exporters:
@@ -100,8 +114,18 @@ config:
         processors: [attributes]
         exporters: [loki]
 ```
-```bash
-helm install logs-receiver castai-helm/castai-audit-logs-receiver --namespace=castai-logs --create-namespace --set castai.apiKey=<api_key>,castai.apiURL="https://api.cast.ai" --values values.yaml
+* deploy chart with `--values` flag set to `values.yaml`:
+```shell
+helm install logs-receiver castai-helm/castai-audit-logs-receiver \
+  --namespace=castai-logs --create-namespace \
+  --set castai.apiKey=<api_access_key>
+  --set castai.apiURL="https://api.cast.ai" \
+  --values values.yaml
+```
+
+To see all chart values that can be customized, run:
+```shell
+helm show values castai-helm/castai-audit-logs-receiver
 ```
 
 ## License

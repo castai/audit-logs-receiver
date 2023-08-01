@@ -1,6 +1,0 @@
-apiVersion: v2
-name: castai-otel-collector
-description: A Helm chart for CAST AI OpenTelemetry Collector
-type: application
-version: 0.1.0
-appVersion: "v0.1.0"

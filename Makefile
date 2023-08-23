@@ -22,12 +22,12 @@ run:
 .PHONY: docker # Build docker image and storing it locally
 docker: BUILD_ARGS:=GOOS=linux
 docker: build
-	cd castai-collector && go build -o castai-collector-$(GOARCH)
+	cd castai-collector && GOOS=linux CGO_ENABLED=0 go build -o castai-collector-$(GOARCH)
 	docker build -t castai-collector . 
 
 .PHONY: run-docker # Launch local docker image
 run-docker: docker
-	docker run castai-collector:latest
+	docker run -e CASTAI_API_URL="$(CASTAI_API_URL)" -e CASTAI_API_KEY="$(CASTAI_API_KEY)" castai-collector:latest
 
 # ==================================================
 # Targets to run an example that uses file exporter.

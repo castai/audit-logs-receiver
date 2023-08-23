@@ -18,7 +18,7 @@ Additional tools / instrumentation / examples are provided for smooth experience
 CAST AI Audit Logs receiver is not part of ['standard' receivers provided by Open Telemetry hosted here](https://github.com/open-telemetry/opentelemetry-collector-contrib).
 So it requires building a custom Open Telemetry Collector (a program that combines selected receivers, processors and exporters into a pipeline used for pushing logs / metrics / traces).
 
-The first step in building a custom Collector is installing required tools, which can be done as simple as running:
+The first step in building a custom Collector is installing required tools, which can be done as simple as running(the only prerequisite is having [Go](https://golang.org/doc/install) installed):
 ```
 make setup
 ```
@@ -40,20 +40,21 @@ make build
 ```
 
 It produces few artifacts (including a binary executable file) into `castai-collector` directory.
+Before running the Collector, it is required to set `CASTAI_API_URL` and `CASTAI_API_KEY` environment variables or provide them directly in `collector-config.yaml` file.
 To run the newly built binary, use:
 ```
-./castai-collector/castai-collector --config collector-config.yaml
+CASTAI_API_URL=https://api.cast.ai CASTAI_API_KEY=<api_access_key> ./castai-collector/castai-collector --config collector-config.yaml
 ```
 
 It can also be executed by using a make target:
 ```
-make run
+CASTAI_API_URL=https://api.cast.ai CASTAI_API_KEY=<api_access_key> make run
 ```
 
 ### Building and running as Docker container
 Both building and running are support by Make targets and can be run as:
 ```
-make docker run-docker
+CASTAI_API_URL=https://api.cast.ai CASTAI_API_KEY=<api_access_key> make docker run-docker
 ```
 
 There is one additional Make target to start Grafana with Loki (available via http://0.0.0.0:3000),

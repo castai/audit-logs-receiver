@@ -192,7 +192,7 @@ func (a *auditLogsReceiver) processResponseBody(ctx context.Context, body []byte
 	var auditLogsMap map[string]interface{}
 	err := json.Unmarshal(body, &auditLogsMap)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unexpected body in response: %v", body)
+		return nil, nil, fmt.Errorf("unexpected body in response: %v", string(body))
 	}
 
 	lastAuditLogTimestamp, err := a.processAuditLogs(ctx, auditLogsMap)

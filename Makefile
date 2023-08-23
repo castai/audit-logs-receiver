@@ -27,7 +27,7 @@ docker: build
 
 .PHONY: run-docker # Launch local docker image
 run-docker: docker
-	docker run -e CASTAI_API_URL="$(CASTAI_API_URL)" -e CASTAI_API_KEY=$(CASTAI_API_KEY) castai-collector:latest
+	docker run -e CASTAI_API_URL="$(CASTAI_API_URL)" -e CASTAI_API_KEY="$(CASTAI_API_KEY)" castai-collector:latest
 
 # ==================================================
 # Targets to run an example that uses file exporter.

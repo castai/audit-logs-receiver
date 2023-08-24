@@ -32,8 +32,8 @@ type auditLogsReceiver struct {
 	pollInterval time.Duration
 	pageLimit    int
 
-	wg     *sync.WaitGroup
-	cancel context.CancelFunc
+	wg          *sync.WaitGroup
+	stopPolling context.CancelFunc
 
 	storage  storage.Storage
 	rest     *resty.Client
@@ -45,7 +45,7 @@ func (a *auditLogsReceiver) Start(_ context.Context, _ component.Host) error {
 
 	// According to Component interface, Start function should not reuse context for background tasks.
 	ctx, cancel := context.WithCancel(context.Background())
-	a.cancel = cancel
+	a.stopPolling = cancel
 	a.wg.Add(1)
 	go a.startPolling(ctx)
 
@@ -54,7 +54,7 @@ func (a *auditLogsReceiver) Start(_ context.Context, _ component.Host) error {
 
 func (a *auditLogsReceiver) Shutdown(_ context.Context) error {
 	a.logger.Debug("shutting down audit logs receiver")
-	a.cancel()
+	a.stopPolling()
 	a.wg.Wait()
 
 	return nil
@@ -69,7 +69,7 @@ func (a *auditLogsReceiver) startPolling(ctx context.Context) {
 	for {
 		err := a.poll(ctx, func() {
 			// Stop function is called in case of critical errors (error that cannot be restored from).
-			a.cancel()
+			a.stopPolling()
 
 			// TODO: reconsider this approach based on Open Telemetry practices.
 			err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)

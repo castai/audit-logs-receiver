@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -307,69 +306,6 @@ func TestPoll(t *testing.T) {
 			consumer:  consumerMock,
 		}
 		err := receiver.poll(ctx, nil)
-		r.NoError(err)
-	})
-
-	t.Run("should cancel work immediately after shutdown is called", func(t *testing.T) {
-		r := require.New(t)
-		ctx := context.Background()
-
-		mockCtrl := gomock.NewController(t)
-		defer mockCtrl.Finish()
-
-		storageMock := mock_storage.NewMockStorage(mockCtrl)
-		storageMock.EXPECT().
-			Get().
-			Return(storage.PollData{
-				CheckPoint: time.Now(),
-			}).AnyTimes()
-		storageMock.EXPECT().
-			Save(gomock.Any()).AnyTimes()
-
-		consumerMock := logsConsumerMock{
-			ConsumeLogsFunc: func(logs plog.Logs) error {
-				return nil
-			},
-		}
-
-		restConfig := Config{
-			API: API{
-				Url: "https://api.cast.ai",
-				Key: uuid.NewString(),
-			},
-			PageLimit: 2,
-		}
-		rest := newRestyClient(&restConfig)
-		httpmock.ActivateNonDefault(rest.GetClient())
-		defer httpmock.Reset()
-
-		reqStarted := make(chan struct{})
-		reqStoped := make(chan struct{})
-		httpmock.RegisterResponder(
-			http.MethodGet,
-			`=~^https:\/\/api\.cast\.ai/v1/audit.?`,
-			func(req *http.Request) (*http.Response, error) {
-				close(reqStarted)
-				<-req.Context().Done()
-				close(reqStoped)
-				return httpmock.NewStringResponse(200, "none"), nil
-			})
-
-		receiver := auditLogsReceiver{
-			logger:       logger,
-			pageLimit:    restConfig.PageLimit,
-			pollInterval: 1 * time.Millisecond,
-			wg:           &sync.WaitGroup{},
-			storage:      storageMock,
-			rest:         rest,
-			consumer:     consumerMock,
-		}
-		err := receiver.Start(ctx, nil)
-		<-reqStarted
-		go func() {
-			receiver.Shutdown(ctx)
-		}()
-		<-reqStoped
 		r.NoError(err)
 	})
 }

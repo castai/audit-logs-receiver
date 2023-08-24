@@ -367,7 +367,8 @@ func TestPoll(t *testing.T) {
 		err := receiver.Start(ctx, nil)
 		<-reqStarted
 		go func() {
-			receiver.Shutdown(ctx)
+			err := receiver.Shutdown(ctx)
+			r.NoError(err)
 		}()
 		<-reqStoped
 		r.NoError(err)

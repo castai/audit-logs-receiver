@@ -50,7 +50,7 @@ func NewAuditLogsReceiver(
 		pollInterval: time.Second * time.Duration(cfg.PollIntervalSec),
 		pageLimit:    cfg.PageLimit,
 		wg:           &sync.WaitGroup{},
-		doneChan:     make(chan bool),
+		cancel:       func() {},
 		storage:      st,
 		rest:         newRestyClient(cfg),
 		consumer:     consumer,

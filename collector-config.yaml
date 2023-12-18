@@ -8,6 +8,8 @@ receivers:
     storage:
       type: "persistent"
       filename: "./audit_logs_poll_data.json"
+    filters:
+      cluster_id: ${env:CASTAI_CLUSTER_ID} # Use CASTAI_CLUSTER_ID env variable to fetch only specific cluster audit logs. This parameter is optional.
 
 exporters:
   logging:

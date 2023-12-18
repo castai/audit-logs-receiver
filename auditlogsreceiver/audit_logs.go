@@ -27,10 +27,16 @@ const (
 	timestampLayout = "2006-01-02T15:04:05.999999999Z"
 )
 
+type filters struct {
+	clusterID *string
+}
+
 type auditLogsReceiver struct {
 	logger       *zap.Logger
 	pollInterval time.Duration
-	pageLimit    int
+
+	pageLimit int
+	filter    filters
 
 	wg          *sync.WaitGroup
 	stopPolling context.CancelFunc
@@ -116,6 +122,9 @@ func (a *auditLogsReceiver) poll(ctx context.Context, stopFunc func()) error {
 				"page.limit": strconv.Itoa(a.pageLimit),
 				"toDate":     pollData.ToDate.UTC().Format(timestampLayout),
 				"fromDate":   pollData.CheckPoint.UTC().Format(timestampLayout),
+			}
+			if a.filter.clusterID != nil && *a.filter.clusterID != "" {
+				queryParams["clusterId"] = *a.filter.clusterID
 			}
 		}
 

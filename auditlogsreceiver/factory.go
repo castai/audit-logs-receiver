@@ -49,11 +49,14 @@ func NewAuditLogsReceiver(
 		logger:       logger,
 		pollInterval: time.Second * time.Duration(cfg.PollIntervalSec),
 		pageLimit:    cfg.PageLimit,
-		wg:           &sync.WaitGroup{},
-		stopPolling:  func() {},
-		storage:      st,
-		rest:         newRestyClient(cfg),
-		consumer:     consumer,
+		filter: filters{
+			clusterID: cfg.Filters.ClusterID,
+		},
+		wg:          &sync.WaitGroup{},
+		stopPolling: func() {},
+		storage:     st,
+		rest:        newRestyClient(cfg),
+		consumer:    consumer,
 	}, nil
 }
 

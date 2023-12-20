@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"go.opentelemetry.io/collector/component"
 )
@@ -20,6 +21,11 @@ type Config struct {
 	PollIntervalSec int                    `mapstructure:"poll_interval_sec"`
 	PageLimit       int                    `mapstructure:"page_limit"`
 	Storage         map[string]interface{} `mapstructure:"storage"`
+	Filters         FilterConfig           `mapstructure:"filters"`
+}
+
+type FilterConfig struct {
+	ClusterID *string `mapstructure:"cluster_id,omitempty"`
 }
 
 type InMemoryStorageConfig struct {
@@ -62,6 +68,13 @@ func (c Config) Validate() error {
 
 	if c.PageLimit < 10 || 1000 < c.PageLimit {
 		return errors.New("page limit must be within 10...1000 interval")
+	}
+
+	if c.Filters.ClusterID != nil && *c.Filters.ClusterID != "" {
+		_, err := uuid.Parse(*c.Filters.ClusterID)
+		if err != nil {
+			return errors.New("cluster id must be a valid UUID")
+		}
 	}
 
 	// Validating storage configuration based on its type.

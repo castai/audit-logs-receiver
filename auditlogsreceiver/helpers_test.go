@@ -110,13 +110,13 @@ func newResponseWithTwoItem(lastLogTimestamp time.Time, cursorData string) strin
 }`
 }
 
-func defaultResponderWithAssertions(t *testing.T, data *storage.PollData, pageLimit int, body string) httpmock.Responder {
+func defaultResponderWithAssertions(t *testing.T, data *storage.PollData, pageLimit int, body string, expectedClusterID string) httpmock.Responder {
 	t.Helper()
 	r := require.New(t)
 
 	return func(req *http.Request) (*http.Response, error) {
 		queryValues := req.URL.Query()
-		r.Equal(3, len(queryValues))
+		r.Equal(4, len(queryValues))
 
 		// Audit Logs API accepts timestamps in UTC.
 		fromDate, err := time.ParseInLocation(timestampLayout, queryValues["fromDate"][0], time.UTC)
@@ -128,6 +128,8 @@ func defaultResponderWithAssertions(t *testing.T, data *storage.PollData, pageLi
 		r.WithinDuration(*data.ToDate, toDate, 0)
 
 		r.Equal(strconv.Itoa(pageLimit), queryValues["page.limit"][0])
+
+		r.Equal(expectedClusterID, queryValues["clusterId"][0])
 
 		return httpmock.NewStringResponse(200, body), nil
 	}

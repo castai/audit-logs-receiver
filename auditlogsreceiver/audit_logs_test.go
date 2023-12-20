@@ -70,17 +70,22 @@ func TestPoll(t *testing.T) {
 		httpmock.ActivateNonDefault(rest.GetClient())
 		defer httpmock.Reset()
 
+		expectedClusterID := uuid.NewString()
+
 		// Polling parameters are not known at the moment of registering a responder, so asserting params in the responder vs using an exact query.
 		httpmock.RegisterResponder(
 			http.MethodGet,
 			`=~^https:\/\/api\.cast\.ai/v1/audit.?`,
-			defaultResponderWithAssertions(t, &data, restConfig.PageLimit, `{}`))
+			defaultResponderWithAssertions(t, &data, restConfig.PageLimit, `{}`, expectedClusterID))
 
 		receiver := auditLogsReceiver{
 			logger:    logger,
 			pageLimit: restConfig.PageLimit,
-			storage:   storageMock,
-			rest:      rest,
+			filter: filters{
+				clusterID: &expectedClusterID,
+			},
+			storage: storageMock,
+			rest:    rest,
 		}
 		err := receiver.poll(ctx, nil)
 		r.NoError(err)
@@ -157,18 +162,23 @@ func TestPoll(t *testing.T) {
 		httpmock.ActivateNonDefault(rest.GetClient())
 		defer httpmock.Reset()
 
+		expectedClusterID := uuid.NewString()
+
 		// Polling parameters are not known at the moment of registering a responder, so asserting params in the responder vs using an exact query.
 		httpmock.RegisterResponder(
 			http.MethodGet,
 			`=~^https:\/\/api\.cast\.ai/v1/audit.?`,
-			defaultResponderWithAssertions(t, &data, restConfig.PageLimit, newResponseWithOneItem(lastLogTimestamp)))
+			defaultResponderWithAssertions(t, &data, restConfig.PageLimit, newResponseWithOneItem(lastLogTimestamp), expectedClusterID))
 
 		receiver := auditLogsReceiver{
 			logger:    logger,
 			pageLimit: restConfig.PageLimit,
-			storage:   storageMock,
-			rest:      rest,
-			consumer:  consumerMock,
+			filter: filters{
+				clusterID: &expectedClusterID,
+			},
+			storage:  storageMock,
+			rest:     rest,
+			consumer: consumerMock,
 		}
 		err := receiver.poll(ctx, nil)
 		r.NoError(err)

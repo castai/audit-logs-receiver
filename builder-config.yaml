@@ -2,7 +2,7 @@ dist:
   name: castai-collector
   description: CAST AI OTel Collector that outputs Audit Logs to the console
   output_path: ./castai-collector
-  otelcol_version: 0.103.0
+  otelcol_version: 0.104.0
 
 receivers:
   - gomod: github.com/castai/audit-logs-receiver/audit-logs v0.104.0

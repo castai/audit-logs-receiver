@@ -2,25 +2,25 @@ dist:
   name: castai-collector
   description: CAST AI OTel Collector that outputs Audit Logs to the console
   output_path: ./castai-collector
-  otelcol_version: 0.91.0
+  otelcol_version: 0.104.0
 
 receivers:
-  - gomod: github.com/castai/audit-logs-receiver/audit-logs v0.91.0
+  - gomod: github.com/castai/audit-logs-receiver/audit-logs v0.104.0
     import: github.com/castai/audit-logs-receiver/audit-logs
     name: "auditlogsreceiver"
     path: "./auditlogsreceiver/"
 
 extensions:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.91.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.104.0
 
 processors:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.91.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/processor/attributesprocessor v0.104.0
 
 exporters:
-  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.91.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.91.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.91.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/coralogixexporter v0.91.0
+  - gomod: go.opentelemetry.io/collector/exporter/loggingexporter v0.104.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.104.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.104.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/coralogixexporter v0.104.0
 
 replaces:
   # Override Lokiexporter dependencies.

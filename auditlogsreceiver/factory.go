@@ -1,8 +1,9 @@
-package auditlogs
+package auditlogsreceiver
 
 import (
 	"context"
 	"fmt"
+	"github.com/castai/audit-logs-receiver/audit-logs/internal/metadata"
 	"strings"
 	"sync"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
-	"github.com/castai/audit-logs-receiver/audit-logs/internal/metadata"
 	"github.com/castai/audit-logs-receiver/audit-logs/storage"
 )
 
@@ -28,7 +28,7 @@ func NewFactory() receiver.Factory {
 
 func NewAuditLogsReceiver(
 	_ context.Context,
-	settings receiver.CreateSettings,
+	settings receiver.Settings,
 	cc component.Config,
 	consumer consumer.Logs,
 ) (receiver.Logs, error) {

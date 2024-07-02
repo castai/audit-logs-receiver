@@ -1,4 +1,4 @@
-type: castai-audit-logs
+type: castai_audit_logs
 
 status:
   class: receiver

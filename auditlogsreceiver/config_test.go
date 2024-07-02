@@ -1,4 +1,4 @@
-package auditlogs
+package auditlogsreceiver
 
 import (
 	"github.com/google/uuid"

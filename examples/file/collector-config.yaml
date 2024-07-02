@@ -1,5 +1,5 @@
 receivers:
-  castai-audit-logs:
+  castai_audit_logs:
     api:
       url:             ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
       key:             ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key
@@ -22,6 +22,6 @@ service:
       level: "debug"
   pipelines:
     logs:
-      receivers: [castai-audit-logs]
+      receivers: [castai_audit_logs]
       processors: []
       exporters: [file]

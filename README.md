@@ -24,10 +24,11 @@ make setup
 ```
 
 It installs:
-- [Open Telemetry Metadata Generator](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/cmd/mdatagen) -
-  required to generate receiver's definition (metadata about receiver itself); for example, stability level, is this a logs or metrics receiver, etc. Audit Logs Exporter's [metadata is defined here](./auditlogsreceiver/metadata.yaml).
 - [Open Telemetry Collector Builder](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/builder) -
   required to generate a code that bootstraps selected components so compilation may produce an executable binary. Builder's [configuration is defined here](./builder-config.yaml)
+It clones and installs mdatagen binary from Open Telemetry Collector repository.:
+- [Open Telemetry Metadata Generator](https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/mdatagen) -
+    required to generate receiver's definition (metadata about receiver itself); for example, stability level, is this a logs or metrics receiver, etc. Audit Logs Exporter's [metadata is defined here](./auditlogsreceiver/metadata.yaml).
 
 Collector can be customized (what gets included in a binary artifact) as needed by tailoring `builder-config.yaml`.
 Refer to OpenTelemetry Collector Contrib Distro's (for example, [the manifest](https://github.com/open-telemetry/opentelemetry-collector-releases/blob/main/distributions/otelcol-contrib/manifest.yaml) for a full list of available components.

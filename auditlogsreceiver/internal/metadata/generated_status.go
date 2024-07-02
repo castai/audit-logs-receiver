@@ -6,7 +6,10 @@ import (
 	"go.opentelemetry.io/collector/component"
 )
 
+var (
+	Type = component.MustNewType("castai_audit_logs")
+)
+
 const (
-	Type          = "castai-audit-logs"
 	LogsStability = component.StabilityLevelAlpha
 )

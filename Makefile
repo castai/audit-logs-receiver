@@ -3,7 +3,8 @@ GOARCH := $(shell go env GOARCH)
 .PHONY: setup # Set up required tools (builder, mdatagen)
 setup:
 	go install go.opentelemetry.io/collector/cmd/builder@latest
-	go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/mdatagen@latest
+	chmod +x ./scripts/setup_mdatagen.sh
+	./scripts/setup_mdatagen.sh
 
 .PHONY: audit-logs-metadata # Generating Audit Logs receiver's metadata
 audit-logs-metadata:

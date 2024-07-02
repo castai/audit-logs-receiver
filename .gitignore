@@ -14,7 +14,8 @@ bin
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
+# generated componenet test
+generated_component_test.go
 # Go workspace file
 go.work.sum
 

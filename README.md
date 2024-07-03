@@ -112,7 +112,7 @@ config:
   service:
     pipelines:
       logs:
-        receivers: [castai-audit-logs]
+        receivers: [castai_audit_logs]
         processors: [attributes]
         exporters: [loki]
 ```

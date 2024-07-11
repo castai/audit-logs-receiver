@@ -10,7 +10,7 @@ Additional tools / instrumentation / examples are provided for smooth experience
 - Building and compiling Open Telemetry Collector using Make files
 - Building and hosting Docker image
 - Helm chart for running collector on k8s
-- Several Open Telemetry examples with different destinations (file, Grafana Loki, Coralogix)
+- Several Open Telemetry examples with different destinations (file, Grafana Loki, Coralogix, raw JSON in stdout)
 
 
 ### Setting things up

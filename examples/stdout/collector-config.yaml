@@ -1,0 +1,27 @@
+receivers:
+  castai_audit_logs:
+    api:
+      url:             ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
+      key:             ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key
+    poll_interval_sec: 10 # This parameter defines poll cycle in seconds.
+    page_limit:        100 # This parameter defines the max number of records returned from the backend in one page.
+    storage:
+      type: "persistent"
+      filename: "./audit_logs_poll_data.json"
+
+exporters:
+  file:
+    path:           /dev/stdout # Write logs directly to stdout in JSON format
+    flush_interval: 100ms
+
+processors:
+
+service:
+  telemetry:
+    logs:
+      level: "error"
+  pipelines:
+    logs:
+      receivers: [castai_audit_logs]
+      processors: []
+      exporters: [file]

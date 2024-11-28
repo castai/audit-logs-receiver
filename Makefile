@@ -2,16 +2,18 @@ GOARCH := $(shell go env GOARCH)
 
 .PHONY: setup # Set up required tools (builder, mdatagen)
 setup:
-	go install go.opentelemetry.io/collector/cmd/builder@latest
-	go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/mdatagen@latest
+	git clone https://github.com/open-telemetry/opentelemetry-collector.git ./opentelemetry-collector
+	cd ./opentelemetry-collector && git checkout v0.104.0
+	cd ./opentelemetry-collector/cmd/builder && go build -o builder .
+	cd ./opentelemetry-collector/cmd/mdatagen && go build -o mdatagen .
 
 .PHONY: audit-logs-metadata # Generating Audit Logs receiver's metadata
 audit-logs-metadata:
-	cd auditlogsreceiver && mdatagen metadata.yaml
+	cd auditlogsreceiver && ../opentelemetry-collector/cmd/mdatagen/mdatagen metadata.yaml
 
 .PHONY: build # Generate and build collector
 build: audit-logs-metadata
-	$(BUILD_ARGS) builder --config builder-config.yaml
+	$(BUILD_ARGS) ./opentelemetry-collector/cmd/builder/builder --config builder-config.yaml
 
 .PHONY: run # Run a default collector that outputs everything to console
 run:

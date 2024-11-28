@@ -1,6 +1,6 @@
 module github.com/castai/audit-logs-receiver/audit-logs
 
-go 1.22
+go 1.23.2
 
 require (
 	github.com/go-resty/resty/v2 v2.7.0

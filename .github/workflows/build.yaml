@@ -25,24 +25,15 @@ jobs:
         with:
           go-version: 1.23.2
 
-      - name: Checkout OpenTelemetry Collector repository
-        run: |
-          git clone https://github.com/open-telemetry/opentelemetry-collector.git /tmp/opentelemetry-collector
-          cd /tmp/opentelemetry-collector
-          git checkout v0.104.0
-
-      - name: Build builder tool
-        run: |
-          cd /tmp/opentelemetry-collector/cmd/builder
-          go build -o builder .
+      - name: Install dependency
+        run: go install go.opentelemetry.io/collector/cmd/builder@v0.104.0
 
       - name: Get release tag
         if: github.event_name == 'release'
         run: echo "RELEASE_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Prepare release
-        run: |
-          /tmp/opentelemetry-collector/cmd/builder/builder --skip-compilation --config builder-config.yaml
+        run: builder --skip-compilation --config builder-config.yaml
 
       - name: Build Go binary amd64
         run: cd castai-collector && go build -ldflags "-s -w -X main.GitCommit=$GITHUB_SHA -X main.GitRef=$GITHUB_REF -X main.Version=${RELEASE_TAG:-commit-$GITHUB_SHA}" -o castai-collector-amd64

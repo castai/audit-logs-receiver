@@ -16,6 +16,8 @@ bin
 *.out
 # generated componenet test
 generated_component_test.go
+# opentelemetry collector
+opentelemetry-collector
 # Go workspace file
 go.work.sum
 

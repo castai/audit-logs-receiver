@@ -12,7 +12,7 @@ receivers:
       cluster_id: ${env:CASTAI_CLUSTER_ID} # Use CASTAI_CLUSTER_ID env variable to fetch only specific cluster audit logs. This parameter is optional.
 
 exporters:
-  logging:
+  debug:
     verbosity: basic
     sampling_initial: 5
     sampling_thereafter: 200
@@ -28,4 +28,4 @@ service:
   pipelines:
     logs:
       receivers: [castai_audit_logs]
-      exporters: [logging]
+      exporters: [debug]

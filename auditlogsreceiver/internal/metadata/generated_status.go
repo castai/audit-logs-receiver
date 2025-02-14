@@ -4,22 +4,13 @@ package metadata
 
 import (
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	Type = component.MustNewType("castai_audit_logs")
+	Type      = component.MustNewType("castai_audit_logs")
+	ScopeName = "github.com/castai/audit-logs-receiver/audit-logs"
 )
 
 const (
 	LogsStability = component.StabilityLevelAlpha
 )
-
-func Meter(settings component.TelemetrySettings) metric.Meter {
-	return settings.MeterProvider.Meter("otelcol/audit-logs-receiver/auditlogsreceiver")
-}
-
-func Tracer(settings component.TelemetrySettings) trace.Tracer {
-	return settings.TracerProvider.Tracer("otelcol/audit-logs-receiver/auditlogsreceiver")
-}

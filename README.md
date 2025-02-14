@@ -94,7 +94,7 @@ helm install logs-receiver castai-helm/castai-audit-logs-receiver \
   --set castai.apiKey=<api_access_key>
   --set castai.apiURL="https://api.cast.ai"
 ```
-Default installation uses [logging](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/loggingexporter) as main log exporter but this can be changed by overriding chart's `config` property with desired collector's pipeline setup.  `collector-config.yaml` files for different exporter setups can be found in [examples](./examples/) directory for both reference and to create `values.yaml` file to pass to Helm chart.
+Default installation uses [debug](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter) as main log exporter but this can be changed by overriding chart's `config` property with desired collector's pipeline setup.  `collector-config.yaml` files for different exporter setups can be found in [examples](./examples/) directory for both reference and to create `values.yaml` file to pass to Helm chart.
 Default image used in chart, which is `us-docker.pkg.dev/castai-hub/library/audit-logs-receiver`, is built with configuration from `builder-config.yaml` file from this repository. You can also build your own image with different extensions and exporters as described in previous sections and then override `image.repository` and `image.tag` properties in Helm chart.
 
 Example Helm install with Loki configuration:

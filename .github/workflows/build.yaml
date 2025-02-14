@@ -26,7 +26,7 @@ jobs:
           go-version: 1.23.2
 
       - name: Install dependency
-        run: go install go.opentelemetry.io/collector/cmd/builder@v0.104.0
+        run: go install go.opentelemetry.io/collector/cmd/builder@v0.119.0
 
       - name: Get release tag
         if: github.event_name == 'release'

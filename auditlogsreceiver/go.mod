@@ -3,7 +3,7 @@ module github.com/castai/audit-logs-receiver/audit-logs
 go 1.23.2
 
 require (
-	github.com/go-resty/resty/v2 v2.7.0
+	github.com/go-resty/resty/v2 v2.16.5
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/jarcoal/httpmock v1.3.0

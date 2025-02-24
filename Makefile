@@ -9,7 +9,7 @@ setup:
 
 .PHONY: audit-logs-metadata # Generating Audit Logs receiver's metadata
 audit-logs-metadata:
-	cd auditlogsreceiver && ../opentelemetry-collector/cmd/mdatagen/mdatagen metadata.yaml
+	cd auditlogsreceiver && mdatagen metadata.yaml
 
 .PHONY: build # Generate and build collector
 build: audit-logs-metadata
@@ -52,3 +52,15 @@ run-loki:
 .PHONY: run-coralogix # Run a collector that exports Audit Logs to Grafana Loki
 run-coralogix:
 	./castai-collector/castai-collector --config ./examples/coralogix/collector-config.yaml
+
+.PHONY: build-datadog
+build-datadog: BUILD_ARGS:=GOOS=linux
+build-datadog: build
+	# Build for multiple architectures
+	cd castai-collector && \
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o castai-collector-amd64 && \
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o castai-collector-arm64
+
+.PHONY: run-datadog-docker
+run-datadog-docker: build-datadog
+	cd examples/datadog && docker compose up --build

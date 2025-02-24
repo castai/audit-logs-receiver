@@ -120,6 +120,49 @@ config:
         processors: [attributes]
         exporters: [loki]
 ```
+Example Helm install with Datadog configuration:
+* create your custom `values.yaml` with pipeline setup from [./examples/datadog/collector-config.yaml](./examples/datadog/collector-config.yaml):
+```shell
+config:
+  receivers:
+    castai_audit_logs:
+      api:
+        url: ${env:CASTAI_API_URL}
+        key: ${env:CASTAI_API_KEY}
+      poll_interval_sec: 10
+      page_limit: 100
+      storage:
+        type: "persistent"
+        filename: "./audit_logs_poll_data.json"
+      filters:
+        cluster_id: ${env:CASTAI_CLUSTER_ID}
+
+  processors:
+    resource:
+      attributes:
+        - key: deployment.environment
+          value: "castai-audit"
+          action: upsert
+    batch:
+      timeout: 1s
+      send_batch_size: 1024
+
+  exporters:
+    datadog:
+      hostname: "castai-collector"
+      api:
+        site: <DD_SITE>
+        key: <DD_API_KEY>
+      logs:
+        use_compression: true  # Enable compression for logs
+
+  service:
+    pipelines:
+      logs:
+        receivers: [castai_audit_logs]
+        processors: [resource, batch]
+        exporters: [datadog]
+```
 * deploy chart with `--values` flag set to `values.yaml`:
 ```shell
 helm install logs-receiver castai-helm/castai-audit-logs-receiver \

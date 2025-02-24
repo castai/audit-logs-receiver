@@ -120,6 +120,15 @@ config:
         processors: [attributes]
         exporters: [loki]
 ```
+* deploy chart with `--values` flag set to `values.yaml`:
+```shell
+helm install logs-receiver castai-helm/castai-audit-logs-receiver \
+  --namespace=castai-logs --create-namespace \
+  --set castai.apiKey=<api_access_key>
+  --set castai.apiURL="https://api.cast.ai" \
+  --values values.yaml
+```
+
 Example Helm install with Datadog configuration:
 * create your custom `values.yaml` with pipeline setup from [./examples/datadog/collector-config.yaml](./examples/datadog/collector-config.yaml):
 ```shell
@@ -151,8 +160,8 @@ config:
     datadog:
       hostname: "castai-collector"
       api:
-        site: <DD_SITE>
-        key: <DD_API_KEY>
+        site: ${env:DD_SITE}
+        key: ${env:DD_API_KEY}
       logs:
         use_compression: true  # Enable compression for logs
 
@@ -169,8 +178,11 @@ helm install logs-receiver castai-helm/castai-audit-logs-receiver \
   --namespace=castai-logs --create-namespace \
   --set castai.apiKey=<api_access_key>
   --set castai.apiURL="https://api.cast.ai" \
+  --set config.exporters.datadog.api.key=<DD_API_KEY> \
+  --set config.exporters.datadog.api.site=<DD_SITE> \
   --values values.yaml
 ```
+You can use the `--debug --dry-run` flags to render the entire Helm template with the values from `values.yaml`. This allows you to inspect the full YAML output before applying it:
 
 To see all chart values that can be customized, run:
 ```shell

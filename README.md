@@ -179,4 +179,4 @@ helm show values castai-helm/castai-audit-logs-receiver
 
 ## License
 
-Code is licensed under the [Apache License 2.0](LICENSE). See [NOTICE.md](NOTICE.md) for complete details, including software and third-party licenses and permissions.
+Code is licensed under the [Apache License 2.0](LICENSE). See [NOTICE.md](NOTICE.md) for complete details, including software and third-party licenses and permissions.     

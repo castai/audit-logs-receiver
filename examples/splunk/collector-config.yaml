@@ -1,0 +1,52 @@
+receivers:
+  castai_audit_logs:
+    api:
+      url: ${env:CASTAI_API_URL}
+      key: ${env:CASTAI_API_KEY}
+    poll_interval_sec: 10
+    page_limit: 100
+    storage:
+      type: "persistent"
+      filename: "./audit_logs_poll_data.json"
+    # filters:
+    #   cluster_id: ${env:CASTAI_CLUSTER_ID}
+
+processors:
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: "castai-audit"
+        action: upsert
+  batch:
+    timeout: 10s
+    send_batch_size: 1
+
+exporters:
+  splunk_hec:
+    # Splunk HTTP Event Collector token.
+    token: ""
+    # URL to a Splunk instance to send data to.
+    endpoint: "https://prd-p-y7wa7.splunkcloud.com:8088/services/collector/event"
+    # Optional Splunk source: https://docs.splunk.com/Splexicon:Source
+    source: "http:test-ronk"
+    # # # Optional Splunk source type: https://docs.splunk.com/Splexicon:Sourcetype
+    # sourcetype: "otel"
+    # # # Splunk index, optional name of the Splunk index targeted.
+    # index: "metrics"
+    # Whether to disable gzip compression over HTTP. Defaults to false.
+    disable_compression: false
+    # HTTP timeout when sending data. Defaults to 10s.
+    timeout: 10s
+    # Whether to skip checking the certificate of the HEC endpoint when sending data over HTTPS. Defaults to false.
+    # For this demo, we use a self-signed certificate on the Splunk docker instance, so this flag is set to true.
+    tls:
+      insecure_skip_verify: false
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    logs:
+      receivers: [castai_audit_logs]
+      processors: [resource, batch]
+      exporters: [splunk_hec]

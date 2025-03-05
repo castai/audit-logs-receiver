@@ -24,6 +24,7 @@ exporters:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.119.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/coralogixexporter v0.119.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/datadogexporter v0.119.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.119.0
 
 replaces:
   # Override Lokiexporter dependencies.

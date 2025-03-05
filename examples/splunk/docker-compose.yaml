@@ -1,0 +1,15 @@
+services:
+  otelcol:
+    build:
+      context: ../..
+      dockerfile: examples/splunk/Dockerfile
+      args:
+        TARGETARCH: ${TARGETARCH:-amd64}
+    environment:
+      - SPLUNK_SITE=${SPLUNK_SITE}
+      - SPLUNK_KEY=${SPLUNK_KEY}
+      - CASTAI_API_URL=${CASTAI_API_URL:-https://api.cast.ai}
+      - CASTAI_API_KEY=${CASTAI_API_KEY}
+      - CASTAI_CLUSTER_ID=${CASTAI_CLUSTER_ID}
+    volumes:
+      - ./data:/data

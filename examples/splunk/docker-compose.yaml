@@ -7,7 +7,7 @@ services:
         TARGETARCH: ${TARGETARCH:-amd64}
     environment:
       - SPLUNK_SITE=${SPLUNK_SITE}
-      - SPLUNK_KEY=${SPLUNK_KEY}
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN}
       - CASTAI_API_URL=${CASTAI_API_URL:-https://api.cast.ai}
       - CASTAI_API_KEY=${CASTAI_API_KEY}
       - CASTAI_CLUSTER_ID=${CASTAI_CLUSTER_ID}

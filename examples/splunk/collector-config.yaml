@@ -23,14 +23,18 @@ processors:
 
 exporters:
   splunk_hec:
+    retry_on_failure:
+      enabled: true
+    log_data_enabled: true
+    health_check_enabled: true
     # Splunk HTTP Event Collector token.
-    token: ""
+    token: "64100170-9a5a-45fd-911e-e86f3e81a3fb"
     # URL to a Splunk instance to send data to.
-    endpoint: "https://prd-p-y7wa7.splunkcloud.com:8088/services/collector/event"
+    endpoint: "https://http-inputs-prd-p-vqewh.splunkcloud.com:8088/services/collector"
     # Optional Splunk source: https://docs.splunk.com/Splexicon:Source
-    source: "http:test-ronk"
-    # # # Optional Splunk source type: https://docs.splunk.com/Splexicon:Sourcetype
-    # sourcetype: "otel"
+    source: "http:http-test"
+    # # # # Optional Splunk source type: https://docs.splunk.com/Splexicon:Sourcetype
+    # sourcetype: "_json"
     # # # Splunk index, optional name of the Splunk index targeted.
     # index: "metrics"
     # Whether to disable gzip compression over HTTP. Defaults to false.
@@ -40,7 +44,8 @@ exporters:
     # Whether to skip checking the certificate of the HEC endpoint when sending data over HTTPS. Defaults to false.
     # For this demo, we use a self-signed certificate on the Splunk docker instance, so this flag is set to true.
     tls:
-      insecure_skip_verify: false
+      insecure_skip_verify: true
+
 service:
   telemetry:
     logs:
@@ -48,5 +53,5 @@ service:
   pipelines:
     logs:
       receivers: [castai_audit_logs]
-      processors: [resource, batch]
+      # processors: [resource, batch]
       exporters: [splunk_hec]

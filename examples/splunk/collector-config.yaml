@@ -30,7 +30,7 @@ exporters:
     # Splunk HTTP Event Collector token.
     token: "64100170-9a5a-45fd-911e-e86f3e81a3fb"
     # URL to a Splunk instance to send data to.
-    endpoint: "https://http-inputs-prd-p-vqewh.splunkcloud.com:8088/services/collector"
+    endpoint: "https://prd-p-vqewh.splunkcloud.com:8088/services/collector"
     # Optional Splunk source: https://docs.splunk.com/Splexicon:Source
     source: "http:http-test"
     # # # # Optional Splunk source type: https://docs.splunk.com/Splexicon:Sourcetype

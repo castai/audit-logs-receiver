@@ -39,8 +39,8 @@ exporters:
   debug:
     verbosity: detailed
   splunk_hec:
-    token: "64100170-9a5a-45fd-911e-e86f3e81a3fb"
-    endpoint: "https://prd-p-vqewh.splunkcloud.com:8088/services/collector"
+    token: ${env:SPLUNK_HEC_TOKEN}
+    endpoint: ${env:SPLUNK_SITE}
     source: "castai-audit"
     sourcetype: "manual"
     index: "main"
@@ -57,5 +57,5 @@ service:
   pipelines:
     logs:
       receivers: [castai_audit_logs]
-      processors: [transform, attributes]  # Added transform first
+      processors: [transform, attributes, batch]  # Added transform first
       exporters: [debug, splunk_hec]

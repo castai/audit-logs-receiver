@@ -1,0 +1,61 @@
+receivers:
+  castai_audit_logs:
+    api:
+      url: "https://api.cast.ai"
+      key:  ${env:CASTAI_API_KEY}
+    poll_interval_sec: 60
+    page_limit: 100
+    storage:
+      type: "persistent"
+      filename: "/data/audit_logs_poll_data.json"
+
+processors:
+  transform:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(body, attributes) where IsMap(attributes)
+          - set(attributes["source"], "castai-audit")
+          - set(attributes["sourcetype"], "manual")
+
+  attributes:
+    actions:
+      - key: "simple_message"
+        value: "CAST AI Event"
+        action: insert  
+
+  batch:
+    timeout: 10s
+    send_batch_size: 1
+  
+  resource:
+    attributes:
+      - key: service.name
+        value: castai-audit-logs-collector
+        action: upsert
+
+exporters:
+  debug:
+    verbosity: detailed
+  splunk_hec:
+    token: ${env:SPLUNK_HEC_TOKEN}
+    endpoint: ${env:SPLUNK_SITE}
+    source: "castai-audit"
+    sourcetype: "manual"
+    index: "main"
+    tls:
+      insecure_skip_verify: true
+    log_data_enabled: true
+    timeout: 30s
+    disable_compression: true
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    logs:
+      receivers: [castai_audit_logs]
+      processors: [transform, attributes, batch]  # Added transform first
+      exporters: [debug, splunk_hec]

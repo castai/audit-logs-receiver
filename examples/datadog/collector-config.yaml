@@ -24,6 +24,7 @@ processors:
 exporters:
   datadog:
     hostname: "castai-collector"
+    proxy_url: ${env:PROXY}
     api:
       site: ${env:DD_SITE}
       key: ${env:DD_API_KEY}

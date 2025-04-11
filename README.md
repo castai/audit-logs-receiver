@@ -182,6 +182,88 @@ helm install logs-receiver castai-helm/castai-audit-logs-receiver \
   --set config.exporters.datadog.api.site=<DD_SITE> \
   --values values.yaml
 ```
+
+Example Helm install with splunk configuration:
+* create your custom `values.yaml` with pipeline setup from [./examples/splunk/collector-config.yaml](./examples/splunk/collector-config.yaml):
+```shell
+config:
+  receivers:
+    castai_audit_logs:
+      api:
+        url: ${env:CASTAI_API_URL}
+        key:  ${env:CASTAI_API_KEY}
+      poll_interval_sec: 60
+      page_limit: 100
+      storage:
+        type: "persistent"
+        filename: "./audit_logs_poll_data.json"
+      filters:
+        cluster_id: ${env:CASTAI_CLUSTER_ID}
+
+  processors:
+    transform:
+      error_mode: ignore
+      log_statements:
+        - context: log
+          statements:
+            - set(body, attributes) where IsMap(attributes)
+            - set(attributes["source"], "castai-audit")
+            - set(attributes["sourcetype"], "manual")
+
+    attributes:
+      actions:
+        - key: "simple_message"
+          value: "CAST AI Event"
+          action: insert  
+
+    batch:
+      timeout: 10s
+      send_batch_size: 1
+    
+    resource:
+      attributes:
+        - key: service.name
+          value: castai-audit-logs-collector
+          action: upsert
+
+  exporters:
+    debug:
+      verbosity: detailed
+    splunk_hec:
+      token: ${env:SPLUNK_HEC_TOKEN}
+      endpoint: ${env:SPLUNK_SITE}
+      source: "castai-audit"
+      sourcetype: "manual"
+      index: "main"
+      tls:
+        insecure_skip_verify: true
+      log_data_enabled: true
+      timeout: 30s
+      disable_compression: true
+
+  service:
+    telemetry:
+      logs:
+        level: "debug"
+    pipelines:
+      logs:
+        receivers: [castai_audit_logs]
+        processors: [transform, attributes, batch]  # Added transform first
+        exporters: [splunk_hec]
+```
+* deploy chart with `--values` flag set to `values.yaml`:
+```shell
+helm install logs-receiver castai-helm/castai-audit-logs-receiver \
+  --namespace=castai-logs --create-namespace \
+  --set castai.apiKey=<api_access_key> \
+  --set castai.clusterID=<clusterid> \
+  --set castai.apiURL="https://api.cast.ai" \
+  --set config.exporters.splunk_hec.token=<SPLUNK_HEC_TOKEN> \
+  --set config.exporters.splunk_hec.endpoint=<SPLUNK_SITE> \
+  --values values.yaml
+```
+
+
 You can use the `--debug --dry-run` flags to render the entire Helm template with the values from `values.yaml`. This allows you to inspect the full YAML output before applying it:
 
 To see all chart values that can be customized, run:

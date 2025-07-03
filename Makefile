@@ -3,7 +3,7 @@ GOARCH := $(shell go env GOARCH)
 .PHONY: setup # Set up required tools (builder, mdatagen)
 setup:
 	git clone https://github.com/open-telemetry/opentelemetry-collector.git ./opentelemetry-collector
-	cd ./opentelemetry-collector && git checkout v0.127.0
+	cd ./opentelemetry-collector && git checkout v0.129.0
 	cd ./opentelemetry-collector/cmd/builder && go build -o builder .
 	cd ./opentelemetry-collector/cmd/mdatagen && go build -o mdatagen .
 

@@ -18,7 +18,6 @@ require (
 	go.opentelemetry.io/collector/pdata v1.39.0
 	go.opentelemetry.io/collector/receiver v1.39.0
 	go.opentelemetry.io/collector/receiver/receivertest v0.133.0
-	go.opentelemetry.io/contrib/bridges/otelzap v1.34.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
 )

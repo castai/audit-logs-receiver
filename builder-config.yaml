@@ -4,7 +4,7 @@ dist:
   output_path: ./castai-collector
 
 receivers:
-  - gomod: github.com/castai/audit-logs-receiver/audit-logs v0.129.0
+  - gomod: github.com/castai/audit-logs-receiver/audit-logs v0.133.0
     import: github.com/castai/audit-logs-receiver/audit-logs
     name: "auditlogsreceiver"
     path: "./auditlogsreceiver/"

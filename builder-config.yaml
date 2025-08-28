@@ -22,7 +22,6 @@ processors:
 exporters:
   - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.133.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/lokiexporter v0.129.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/coralogixexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/datadogexporter v0.133.0
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/splunkhecexporter v0.133.0

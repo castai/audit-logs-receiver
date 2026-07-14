@@ -11,6 +11,13 @@ setup:
 audit-logs-metadata:
 	cd auditlogsreceiver && ../opentelemetry-collector/cmd/mdatagen/mdatagen metadata.yaml
 
+.PHONY: audit-logs-v2-metadata # Generating Audit Logs v2 receiver's metadata
+audit-logs-v2-metadata:
+	cd auditlogsreceiver/v2 && ../../opentelemetry-collector/cmd/mdatagen/mdatagen metadata.yaml
+	# mdatagen derives the package name from the directory name ("v2"), but the
+	# package is named "auditlogsreceiver" to match v1. Fix the generated files.
+	sed -i.bak 's/^package v2$$/package auditlogsreceiver/' auditlogsreceiver/v2/generated_component_test.go auditlogsreceiver/v2/generated_package_test.go && rm -f auditlogsreceiver/v2/*.bak
+
 .PHONY: build # Generate and build collector
 build: audit-logs-metadata
 	$(BUILD_ARGS) ./opentelemetry-collector/cmd/builder/builder --config builder-config.yaml

@@ -8,6 +8,10 @@ receivers:
     import: github.com/castai/audit-logs-receiver/audit-logs
     name: "auditlogsreceiver"
     path: "./auditlogsreceiver/"
+  - gomod: github.com/castai/audit-logs-receiver/audit-logs/v2 v2.0.0
+    import: github.com/castai/audit-logs-receiver/audit-logs/v2
+    name: "auditlogsreceiver"
+    path: "./auditlogsreceiver/v2/"
 
 extensions:
   - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.147.0

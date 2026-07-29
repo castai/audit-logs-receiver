@@ -15,7 +15,7 @@ import (
 type State struct {
 	From   time.Time `json:"from"`
 	To     time.Time `json:"to,omitempty"`
-	Cursor string   `json:"cursor,omitempty"`
+	Cursor string    `json:"cursor,omitempty"`
 }
 
 // Memory is a checkpoint store that keeps state in memory.

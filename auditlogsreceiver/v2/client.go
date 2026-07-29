@@ -175,22 +175,22 @@ func buildQuery(params ListEventsParams) url.Values {
 		q.Set("filter.search", f.Search)
 	}
 	if len(f.Clusters) > 0 {
-		q.Set("filter.clusters", strings.Join(f.Clusters, ","))
+		q["filter.clusters"] = f.Clusters
 	}
 	if len(f.Domains) > 0 {
-		q.Set("filter.domains", strings.Join(f.Domains, ","))
+		q["filter.domains"] = f.Domains
 	}
 	if len(f.Resources) > 0 {
-		q.Set("filter.resources", strings.Join(f.Resources, ","))
+		q["filter.resources"] = f.Resources
 	}
 	if len(f.Actions) > 0 {
-		q.Set("filter.actions", strings.Join(f.Actions, ","))
+		q["filter.actions"] = f.Actions
 	}
 	if len(f.Sources) > 0 {
-		q.Set("filter.sources", strings.Join(f.Sources, ","))
+		q["filter.sources"] = f.Sources
 	}
 	if len(f.Severity) > 0 {
-		q.Set("filter.severity", strings.Join(f.Severity, ","))
+		q["filter.severity"] = f.Severity
 	}
 
 	q.Set("sort.field", "occurred_at")

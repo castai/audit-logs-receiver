@@ -1,0 +1,32 @@
+receivers:
+  castai_audit_logs_v2:
+    api:
+      url: ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
+      key: ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key
+    poll_interval: 10s # This parameter defines poll cycle.
+    page_limit: 100 # This parameter defines the max number of records returned from the backend in one page.
+    checkpoint_file: ./audit_logs_v2_checkpoint.json
+
+exporters:
+  otlp_http/loki:
+    endpoint: http://localhost:3100/otlp
+
+processors:
+  transform:
+    log_statements:
+      - context: log
+        statements:
+          # Convert all attributes to JSON string and set as body.
+          # This enables LogQL queries like:
+          #   {job="castai-audit-logs-v2"} | json | event_domain="autoscaler"
+          - set(body, attributes)
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    logs:
+      receivers: [castai_audit_logs_v2]
+      processors: [transform]
+      exporters: [otlp_http/loki]

@@ -3,13 +3,13 @@ CAST AI Audit Logs V2 Receiver (Alpha)
 
 > **Status: Alpha** — This receiver is under active development and intended for early testing with friendly users. It is not production-ready and may change. The v1 receiver (`castai_audit_logs`) remains the supported version.
 
-This receiver polls the CAST AI Audit API v2 (`GET /v2/audit/events`) and maps audit events to OpenTelemetry log records. It is built as a separate package in the same repository, and both v1 and v2 receivers can be included in the same collector binary.
+This receiver polls the CAST AI Audit API v2 and maps audit events to OpenTelemetry log records. It is built as a separate package in the same repository, and both v1 and v2 receivers can be included in the same collector binary.
 
 Compared to v1, the v2 receiver supports:
 - The richer v2 audit event schema (hierarchical `domain.resource.action` event types, actor and resource entities, severity model, correlation IDs, labels)
 - Seven filter dimensions (clusters, domains, resources, actions, sources, severity, search)
-- Atomic checkpoint storage with corruption recovery
-- Single-page-per-poll pagination that respects the poll interval
+- Reliable checkpoint persistence
+- Pagination that respects the poll interval
 
 For general information about this repository — what an OpenTelemetry Collector is, how the build system works, and how to install the required tools — see the [main README](../../README.md).
 
@@ -84,32 +84,32 @@ service:
 
 Each v2 audit event is mapped to an OpenTelemetry log record as follows:
 
-| OTel field | Attribute key | Source field | Notes |
-|---|---|---|---|
-| Timestamp | — | `occurredAt` | Event occurrence time |
-| ObservedTimestamp | — | *time.Now()* | Set when the receiver processes the event |
-| Body | — | `description` | Human-readable event description |
-| SeverityNumber | — | `eventSeverity` | Mapped to OTel severity numbers (info=9, warn=13, error=17) |
-| SeverityText | — | `eventSeverityText` | `info`, `warn`, or `error` |
-| Attribute | `event.id` | `eventId` | UUID |
-| Attribute | `event.domain` | `eventDomain` | e.g. `autoscaler`, `workload`, `kent` |
-| Attribute | `event.resource` | `eventResource` | e.g. `node`, `surge`, `recommended_requests` |
-| Attribute | `event.action` | `eventAction` | e.g. `created`, `updated`, `deleted` |
-| Attribute | `actor.id` | `actor.id` | e.g. `internal\|autoscaler`, `csp\|aws` |
-| Attribute | `actor.type` | `actor.type` | `internal`, `user`, or `csp` |
-| Attribute | `actor.display_name` | `actor.displayName` | |
-| Attribute | `actor.email` | `actor.email` | May be empty for internal/CSP actors |
-| Attribute | `resource.type` | `resource.type` | e.g. `Pod`, `Deployment`, `node` |
-| Attribute | `resource.id` | `resource.id` | UUID, may be empty |
-| Attribute | `resource.display_name` | `resource.displayName` | |
-| Attribute | `cluster.id` | `clusterId` | Only set when present |
-| Attribute | `tenant.id` | `tenantId` | |
-| Attribute | `ingested_at` | `ingestedAt` | RFC3339 timestamp |
-| Attribute | `labels` | `labels` | Nested map, varies by event type |
-| Attribute | `correlation.id` | `correlationId` | Only set when present |
-| Attribute | `correlation.count` | `correlatedEventCount` | Only set when `correlationId` is present |
-| Attribute | `request.id` | `requestId` | Only set when present |
-| TraceID | — | `correlationId` | If the correlation ID is a valid UUID, it is also set as the OTel TraceID |
+| OTel field | Attribute key | Notes |
+|---|---|---|
+| Timestamp | — | Event occurrence time |
+| ObservedTimestamp | — | Set when the receiver processes the event |
+| Body | — | Human-readable event description |
+| SeverityNumber | — | Mapped to OTel severity numbers (info=9, warn=13, error=17) |
+| SeverityText | — | `info`, `warn`, or `error` |
+| Attribute | `event.id` | UUID |
+| Attribute | `event.domain` | e.g. `autoscaler`, `workload`, `kent` |
+| Attribute | `event.resource` | e.g. `node`, `surge`, `recommended_requests` |
+| Attribute | `event.action` | e.g. `created`, `updated`, `deleted` |
+| Attribute | `actor.id` | e.g. `internal\|autoscaler`, `csp\|aws` |
+| Attribute | `actor.type` | `internal`, `user`, or `csp` |
+| Attribute | `actor.display_name` | |
+| Attribute | `actor.email` | May be empty for internal/CSP actors |
+| Attribute | `resource.type` | e.g. `Pod`, `Deployment`, `node` |
+| Attribute | `resource.id` | UUID, may be empty |
+| Attribute | `resource.display_name` | |
+| Attribute | `cluster.id` | Only set when present |
+| Attribute | `tenant.id` | |
+| Attribute | `ingested_at` | RFC3339 timestamp |
+| Attribute | `labels` | Nested map, varies by event type |
+| Attribute | `correlation.id` | Only set when present |
+| Attribute | `correlation.count` | Only set when `correlation.id` is present |
+| Attribute | `request.id` | Only set when present |
+| TraceID | — | If the correlation ID is a valid UUID, it is also set as the OTel TraceID |
 
 ### Examples
 
@@ -155,15 +155,9 @@ V2 example configs are available in the [examples](../../examples/) directory:
 
 ### Checkpoint persistence
 
-The receiver stores its polling position in a checkpoint file so it can resume without duplicates after a restart. The checkpoint is a JSON file with the following fields:
+The receiver stores its polling position in a checkpoint file so it can resume without duplicates after a restart. To start fresh (e.g. to re-fetch recent events), delete the checkpoint file and restart the collector.
 
-| Field | Description |
-|-------|-------------|
-| `from` | Lower bound of the current polling interval |
-| `to` | Upper bound of the current polling interval (zero when interval is complete) |
-| `cursor` | API pagination cursor for the current interval (empty when not mid-pagination) |
-
-On restart, the receiver resumes from the checkpoint. If no checkpoint file exists and `lookback` is set, the first poll fetches events from `now - lookback`. If no checkpoint and no lookback, the first poll starts from the current time.
+If no checkpoint file exists and `lookback` is set, the first poll fetches events from `now - lookback`. If no checkpoint and no lookback, the first poll starts from the current time.
 
 ### V1 to V2 migration notes
 

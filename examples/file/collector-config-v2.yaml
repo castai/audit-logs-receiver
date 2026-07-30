@@ -1,0 +1,25 @@
+receivers:
+  castai_audit_logs_v2:
+    api:
+      url: ${env:CASTAI_API_URL} # Use CASTAI_API_URL env variable to override default API URL (https://api.cast.ai/)
+      key: ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key
+    poll_interval: 10s # This parameter defines poll cycle.
+    page_limit: 100 # This parameter defines the max number of records returned from the backend in one page.
+    checkpoint_file: ./audit_logs_v2_checkpoint.json
+
+exporters:
+  file:
+    path: ./audit_logs_v2.log
+    flush_interval: 100ms
+
+processors:
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    logs:
+      receivers: [castai_audit_logs_v2]
+      processors: []
+      exporters: [file]

@@ -1,0 +1,12 @@
+type: castai_audit_logs_v2
+
+status:
+  class: receiver
+  stability:
+    alpha: [logs]
+  distributions: [contrib]
+
+tests:
+  config:
+    api:
+      key: test-key

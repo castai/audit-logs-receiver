@@ -1,0 +1,59 @@
+receivers:
+  castai_audit_logs_v2:
+    api:
+      url: ${env:CASTAI_API_URL}
+      key: ${env:CASTAI_API_KEY}
+    poll_interval: 60s
+    page_limit: 100
+    checkpoint_file: ./audit_logs_v2_checkpoint.json
+
+processors:
+  transform:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(body, attributes) where IsMap(attributes)
+          - set(attributes["source"], "castai-audit")
+          - set(attributes["sourcetype"], "manual")
+
+  attributes:
+    actions:
+      - key: "simple_message"
+        value: "CAST AI Event"
+        action: insert
+
+  batch:
+    timeout: 10s
+    send_batch_size: 1
+
+  resource:
+    attributes:
+      - key: service.name
+        value: castai-audit-logs-collector
+        action: upsert
+
+exporters:
+  debug:
+    verbosity: detailed
+  splunk_hec:
+    token: ${env:SPLUNK_HEC_TOKEN}
+    endpoint: ${env:SPLUNK_SITE}
+    source: "castai-audit"
+    sourcetype: "manual"
+    index: "main"
+    tls:
+      insecure_skip_verify: true
+    log_data_enabled: true
+    timeout: 30s
+    disable_compression: true
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    logs:
+      receivers: [castai_audit_logs_v2]
+      processors: [transform, attributes, batch]
+      exporters: [debug, splunk_hec]

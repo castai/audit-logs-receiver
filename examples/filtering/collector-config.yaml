@@ -1,0 +1,25 @@
+receivers:
+  castai_audit_logs:
+    api:
+      url: ${env:CASTAI_API_URL}
+      key: ${env:CASTAI_API_KEY}
+    poll_interval_sec: 10
+    page_limit: 100
+    storage:
+      type: "persistent"
+      filename: "./audit_logs_poll_data.json"
+    filters:
+      cluster_id: ${env:CASTAI_CLUSTER_ID}
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  telemetry:
+    logs:
+      level: "debug"
+  pipelines:
+    logs:
+      receivers: [castai_audit_logs]
+      exporters: [debug]

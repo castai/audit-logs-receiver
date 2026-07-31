@@ -279,6 +279,12 @@ To see all chart values that can be customized, run:
 helm show values castai-helm/castai-audit-logs-receiver
 ```
 
+### Audit Logs V2 Receiver (Alpha)
+
+An experimental v2 receiver (`castai_audit_logs_v2`) is available for early testing. It polls the CAST AI Audit API v2 and supports the richer v2 event schema with seven filter dimensions. It is **alpha** and not production-ready — intended for friendly users to evaluate before it eventually replaces v1.
+
+For setup, configuration, and examples, see the [V2 Receiver guide](./auditlogsreceiver/v2/README.md).
+
 ## License
 
 Code is licensed under the [Apache License 2.0](LICENSE). See [NOTICE.md](NOTICE.md) for complete details, including software and third-party licenses and permissions.     

@@ -6,7 +6,7 @@ CAST AI Audit Logs V2 Receiver (Alpha)
 This receiver polls the CAST AI Audit API v2 and maps audit events to OpenTelemetry log records. It is built as a separate package in the same repository, and both v1 and v2 receivers can be included in the same collector binary.
 
 Compared to v1, the v2 receiver supports:
-- The richer v2 audit event schema (hierarchical `domain.resource.action` event types, actor and resource entities, severity model, correlation IDs, labels)
+- Richer event schema (hierarchical `domain.resource.action` event types, actor and resource entities, severity model, correlation IDs, labels)
 - Seven filter dimensions (clusters, domains, resources, actions, sources, severity, search)
 - Reliable checkpoint persistence
 - Pagination that respects the poll interval

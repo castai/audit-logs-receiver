@@ -1,7 +1,7 @@
 CAST AI Audit Logs V2 Receiver (Alpha)
 =================
 
-> **Status: Alpha** — This receiver is under active development and intended for early testing with friendly users. It is not production-ready and may change. The v1 receiver (`castai_audit_logs`) remains the supported version.
+> **Status: Alpha** — This receiver is under active development and intended for early testing with friendly users. It is not production-ready and we may introduce breaking changes. The v1 receiver (`castai_audit_logs`) remains the supported version.
 
 This receiver polls the CAST AI Audit API v2 and maps audit events to OpenTelemetry log records. It is built as a separate package in the same repository, and both v1 and v2 receivers can be included in the same collector binary.
 

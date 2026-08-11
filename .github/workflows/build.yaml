@@ -52,6 +52,9 @@ jobs:
       - name: Test
         run: cd auditlogsreceiver && go test -race ./...
 
+      - name: Test v2
+        run: cd auditlogsreceiver/v2 && go test -race ./...
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 

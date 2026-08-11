@@ -19,7 +19,7 @@ audit-logs-v2-metadata:
 	sed -i.bak 's/^package v2$$/package auditlogsreceiver/' auditlogsreceiver/v2/generated_component_test.go auditlogsreceiver/v2/generated_package_test.go && rm -f auditlogsreceiver/v2/*.bak
 
 .PHONY: build # Generate and build collector
-build: audit-logs-metadata
+build: audit-logs-metadata audit-logs-v2-metadata
 	$(BUILD_ARGS) ./opentelemetry-collector/cmd/builder/builder --config builder-config.yaml
 
 .PHONY: run # Run a default collector that outputs everything to console

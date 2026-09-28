@@ -41,7 +41,8 @@ CASTAI_API_URL=https://api.cast.ai CASTAI_API_KEY=<api_access_key> \
 | `api.key` | string | *(required)* | CAST AI API access key |
 | `api.timeout` | duration | `30s` | HTTP client timeout |
 | `poll_interval` | duration | `10s` | Interval between poll cycles |
-| `page_limit` | int | `100` | Max records per API page (1–250) |
+| `page_limit` | int | `100` | Max records per API page (1–250). The API caps this to 25 when `include_body` is true. |
+| `include_body` | bool | `false` | Include the full event body (JSON payload, e.g. changelogs, cluster details) in each log record. When enabled, the body is attached as a structured `event.body` attribute. The API caps the page size to 25 when this is on. Defaults to `false` for backward compatibility. |
 | `lookback` | duration | `0s` | On first run (no checkpoint), fetch events from this far back. If omitted, starts from the current time. |
 | `checkpoint_file` | string | *(empty)* | Path to checkpoint file. Empty = in-memory (lost on restart). Set to a file path for persistent checkpointing. |
 | `filters.search` | string | *(empty)* | Full-text search query |
@@ -61,6 +62,7 @@ receivers:
       key: ${env:CASTAI_API_KEY}
     poll_interval: 10s
     page_limit: 100
+    include_body: false
     checkpoint_file: ./audit_logs_v2_checkpoint.json
     lookback: 1h
     filters:
@@ -95,6 +97,7 @@ Each v2 audit event is mapped to an OpenTelemetry log record as follows:
 | Attribute | `event.domain` | e.g. `autoscaler`, `workload`, `kent` |
 | Attribute | `event.resource` | e.g. `node`, `surge`, `recommended_requests` |
 | Attribute | `event.action` | e.g. `created`, `updated`, `deleted` |
+| Attribute | `event.body` | Full event JSON payload as a structured map (only when `include_body` is true). The API returns this base64-encoded; the receiver decodes it to a queryable JSON object. e.g. `{"changelog": [{"field": "Autoscaler.enabled", "oldValue": true, "newValue": false}]}` |
 | Attribute | `actor.id` | e.g. `internal\|autoscaler`, `csp\|aws` |
 | Attribute | `actor.type` | `internal`, `user`, or `csp` |
 | Attribute | `actor.display_name` | |

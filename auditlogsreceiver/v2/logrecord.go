@@ -1,6 +1,8 @@
 package auditlogsreceiver
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +27,9 @@ func (e *Event) ToLogRecord() (plog.LogRecord, error) {
 		"event.resource": e.EventResource,
 		"event.action":   e.EventAction,
 		"ingested_at":    e.IngestedAt.UTC().Format(time.RFC3339Nano),
+	}
+	if e.Body != "" {
+		attr["event.body"] = decodeEventBody(e.Body)
 	}
 	if e.ClusterID != "" {
 		attr["cluster.id"] = e.ClusterID
@@ -62,4 +67,23 @@ func (e *Event) ToLogRecord() (plog.LogRecord, error) {
 	}
 
 	return r, nil
+}
+
+// decodeEventBody converts the API's event body into a structured map.
+func decodeEventBody(body string) any {
+	if decoded, err := base64.StdEncoding.DecodeString(body); err == nil {
+		var parsed map[string]any
+		if err := json.Unmarshal(decoded, &parsed); err == nil {
+			return parsed
+		}
+		return string(decoded) // When valid base64 but not JSON, return decoded text.
+	}
+
+	// Future-proof: if the proto changes to string, the body is plain JSON.
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(body), &parsed); err == nil {
+		return parsed
+	}
+
+	return body // Not base64, not JSON — return the raw string.
 }

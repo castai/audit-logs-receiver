@@ -52,6 +52,7 @@ type Config struct {
 	API            APIConfig     `mapstructure:"api"`
 	PollInterval   time.Duration `mapstructure:"poll_interval"`
 	PageLimit      int           `mapstructure:"page_limit"`
+	IncludeBody    bool          `mapstructure:"include_body"`
 	Lookback       time.Duration `mapstructure:"lookback"`
 	CheckpointFile string        `mapstructure:"checkpoint_file"`
 	Filters        FilterConfig  `mapstructure:"filters"`

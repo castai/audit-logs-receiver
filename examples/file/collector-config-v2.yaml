@@ -5,6 +5,8 @@ receivers:
       key: ${env:CASTAI_API_KEY} # Use CASTAI_API_KEY env variable to provide API Access Key
     poll_interval: 10s # This parameter defines poll cycle.
     page_limit: 100 # This parameter defines the max number of records returned from the backend in one page.
+    include_body: false # Include the full event body (JSON payload, e.g. changelogs) in each log record.
+                        # The API caps the effective page size to 25 when this is true.
     checkpoint_file: ./audit_logs_v2_checkpoint.json
 
 exporters:

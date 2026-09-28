@@ -126,10 +126,11 @@ func (r *Receiver) Next(ctx context.Context) error {
 	}
 
 	params := ListEventsParams{
-		PageLimit: r.config.PageLimit,
-		Filters:   r.config.Filters.ToFilters(),
-		FromDate:  state.From,
-		ToDate:    state.To,
+		PageLimit:   r.config.PageLimit,
+		Filters:     r.config.Filters.ToFilters(),
+		FromDate:    state.From,
+		ToDate:      state.To,
+		IncludeBody: r.config.IncludeBody,
 	}
 	if state.Cursor != "" {
 		params.PageCursor = state.Cursor

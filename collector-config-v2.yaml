@@ -5,6 +5,7 @@ receivers:
       key: ${env:CASTAI_API_KEY}
     poll_interval: 10s
     page_limit: 100
+    include_body: false # Include the full event body (JSON payload, e.g. changelogs) in each log record.
     checkpoint_file: ./audit_logs_v2_checkpoint.json
 
 exporters:

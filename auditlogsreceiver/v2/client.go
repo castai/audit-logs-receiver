@@ -82,6 +82,7 @@ type Event struct {
 	EventSeverity        uint32         `json:"eventSeverity,omitempty"`
 	EventSeverityText    string         `json:"eventSeverityText,omitempty"`
 	Description          string         `json:"description,omitempty"`
+	Body                 string         `json:"body,omitempty"`
 	Actor                *Actor         `json:"actor,omitempty"`
 	Resource             *Resource      `json:"resource,omitempty"`
 	Labels               map[string]any `json:"labels,omitempty"`
@@ -110,11 +111,12 @@ type Filters struct {
 
 // ListEventsParams defines the parameters for listing audit events.
 type ListEventsParams struct {
-	PageLimit  int
-	PageCursor string
-	FromDate   time.Time
-	ToDate     time.Time
-	Filters    Filters
+	PageLimit    int
+	PageCursor   string
+	FromDate     time.Time
+	ToDate       time.Time
+	Filters      Filters
+	IncludeBody  bool
 }
 
 // ListEvents retrieves audit events from the v2 API.
@@ -191,6 +193,10 @@ func buildQuery(params ListEventsParams) url.Values {
 	}
 	if len(f.Severity) > 0 {
 		q["filter.severity"] = f.Severity
+	}
+
+	if params.IncludeBody {
+		q.Set("includeBody", "true")
 	}
 
 	q.Set("sort.field", "occurred_at")

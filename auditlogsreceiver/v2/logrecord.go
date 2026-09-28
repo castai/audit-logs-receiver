@@ -70,13 +70,14 @@ func (e *Event) ToLogRecord() (plog.LogRecord, error) {
 }
 
 // decodeEventBody converts the API's event body into a structured map.
-func decodeEventBody(body string) any {
+func decodeEventBody(body string) map[string]any {
+	// Current proto: bytes field, base64-encoded in the JSON response.
 	if decoded, err := base64.StdEncoding.DecodeString(body); err == nil {
 		var parsed map[string]any
 		if err := json.Unmarshal(decoded, &parsed); err == nil {
 			return parsed
 		}
-		return string(decoded) // When valid base64 but not JSON, return decoded text.
+		return map[string]any{"_raw": string(decoded)} // Valid base64 but not JSON.
 	}
 
 	// Future-proof: if the proto changes to string, the body is plain JSON.
@@ -85,5 +86,5 @@ func decodeEventBody(body string) any {
 		return parsed
 	}
 
-	return body // Not base64, not JSON — return the raw string.
+	return map[string]any{"_raw": body} // Not base64, not JSON.
 }

@@ -13,6 +13,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestBuildQueryIncludeBody(t *testing.T) {
+	withBody := buildQuery(ListEventsParams{
+		PageLimit:   100,
+		IncludeBody: true,
+	})
+	assert.Equal(t, "true", withBody.Get("includeBody"))
+
+	withoutBody := buildQuery(ListEventsParams{
+		PageLimit: 100,
+	})
+	assert.Empty(t, withoutBody.Get("includeBody"))
+}
+
 func TestListEventsQueryParams(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "castai/audit-logs-receiver/0.2.0", r.Header.Get("User-Agent"))

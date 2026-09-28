@@ -1,6 +1,7 @@
 package auditlogsreceiver
 
 import (
+	"encoding/base64"
 	"testing"
 	"time"
 
@@ -15,6 +16,108 @@ func getAttr(t *testing.T, attrs pcommon.Map, key string) pcommon.Value {
 	require.True(t, ok, "expected attribute %q to exist", key)
 
 	return v
+}
+
+func TestDecodeEventBody(t *testing.T) {
+	changelogJSON := `{"changelog":[{"field":"Autoscaler.enabled","oldValue":true,"newValue":false}]}`
+	changelogB64 := base64.StdEncoding.EncodeToString([]byte(changelogJSON))
+
+	tests := []struct {
+		name     string
+		input    string
+		expected map[string]any
+	}{
+		{
+			name:  "base64-encoded JSON",
+			input: changelogB64,
+			expected: map[string]any{
+				"changelog": []any{
+					map[string]any{
+						"field":    "Autoscaler.enabled",
+						"oldValue": true,
+						"newValue": false,
+					},
+				},
+			},
+		},
+		{
+			name:  "plain JSON (future proto string)",
+			input: `{"cluster":{"id":"abc-123"}}`,
+			expected: map[string]any{
+				"cluster": map[string]any{"id": "abc-123"},
+			},
+		},
+		{
+			name:     "valid base64 but not JSON",
+			input:    base64.StdEncoding.EncodeToString([]byte("not json at all")),
+			expected: map[string]any{"_raw": "not json at all"},
+		},
+		{
+			name:     "not base64, not JSON",
+			input:    "plain text with spaces and !symbols",
+			expected: map[string]any{"_raw": "plain text with spaces and !symbols"},
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: map[string]any{"_raw": ""},
+		},
+		{
+			name:     "empty JSON object",
+			input:    base64.StdEncoding.EncodeToString([]byte("{}")),
+			expected: map[string]any{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := decodeEventBody(tt.input)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestEventToLogRecordWithBody(t *testing.T) {
+	bodyB64 := base64.StdEncoding.EncodeToString([]byte(`{"changelog":[{"field":"Autoscaler.enabled"}]}`))
+
+	e := Event{
+		EventID:       "event-body-001",
+		TenantID:      "tenant-001",
+		OccurredAt:    time.Now().UTC(),
+		IngestedAt:    time.Now().UTC(),
+		Body:           bodyB64,
+	}
+
+	lr, err := e.ToLogRecord()
+	require.NoError(t, err)
+
+	// event.body should be a structured map, not a base64 string.
+	bodyAttr := getAttr(t, lr.Attributes(), "event.body")
+	_, ok := bodyAttr.Map().Get("changelog")
+	assert.True(t, ok, "expected changelog key in event.body")
+}
+
+func TestEventToLogRecordWithoutBody(t *testing.T) {
+	e := Event{
+		EventID:           "event-nobody-001",
+		TenantID:          "tenant-001",
+		OccurredAt:        time.Now().UTC(),
+		IngestedAt:        time.Now().UTC(),
+		EventDomain:       "autoscaler",
+		EventResource:     "policy",
+		EventAction:       "updated",
+		EventSeverity:     9,
+		EventSeverityText: "info",
+		Description:       "Policy updated",
+		Body:              "", // No body.
+	}
+
+	lr, err := e.ToLogRecord()
+	require.NoError(t, err)
+
+	// The event.body attribute should be absent when Body is empty.
+	_, ok := lr.Attributes().Get("event.body")
+	assert.False(t, ok, "event.body should not be set when Body is empty")
 }
 
 func TestEventToLogRecord(t *testing.T) {

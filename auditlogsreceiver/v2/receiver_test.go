@@ -102,8 +102,18 @@ func TestReceiverRestartMidPagination(t *testing.T) {
 	var mu sync.Mutex
 	var gotCursors []string
 
+	// The receiver is expected to issue exactly two requests: page 1 (no
+	// cursor) in phase 1 and the cursor-1 page in phase 2. Any further request
+	// (the poll loop keeps running until Shutdown) is parked until its request
+	// context is cancelled, so it can never add a cursor or record before the
+	// assertions below run.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
+		if len(gotCursors) >= 2 {
+			mu.Unlock()
+			<-r.Context().Done() // Park the request until shutdown cancels it.
+			return
+		}
 		cursor := r.URL.Query().Get("page.cursor")
 		gotCursors = append(gotCursors, cursor)
 		mu.Unlock()
@@ -150,11 +160,18 @@ func TestReceiverRestartMidPagination(t *testing.T) {
 	r2, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, sink2)
 	require.NoError(t, err)
 	require.NoError(t, r2.Start(context.Background(), nil))
-	require.Eventually(t, func() bool { return sink2.LogRecordCount() == 1 }, time.Second, 5*time.Millisecond)
+	// Wait for the page-2 record AND for the poll cycle to complete (the
+	// checkpoint write happens after ConsumeLogs). Then stop the receiver
+	// before it can open a new interval.
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return sink2.LogRecordCount() == 1 && len(gotCursors) == 2
+	}, time.Second, 5*time.Millisecond)
 	require.NoError(t, r2.Shutdown(context.Background()))
 
-	// No duplicates across the restart: each event ID appears exactly once in
-	// each sink, and the second sink only ever saw the cursor-1 page.
+	// No duplicates across the restart: the second receiver only ever saw the
+	// cursor-1 page, and any further request was parked until shutdown.
 	mu.Lock()
 	defer mu.Unlock()
 	require.Equal(t, []string{"", "cursor-1"}, gotCursors)

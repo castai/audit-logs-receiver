@@ -5,3 +5,10 @@ status:
   stability:
     alpha: [logs]
   distributions: [contrib]
+
+tests:
+  config:
+    api:
+      key: test-key
+    storage:
+      type: in-memory

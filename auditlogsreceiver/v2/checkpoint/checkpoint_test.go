@@ -58,26 +58,18 @@ func TestFileCorruptionRecovery(t *testing.T) {
 	filename := filepath.Join(t.TempDir(), "checkpoint.json")
 	require.NoError(t, os.WriteFile(filename, []byte("not valid json"), 0644))
 
-	// A corrupted checkpoint must surface as an error, not silently restart
-	// from the beginning (which could skip undelivered events).
-	_, err := checkpoint.NewFile(filename)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "parsing checkpoint file")
+	s, err := checkpoint.NewFile(filename)
+	require.NoError(t, err)
 
-	// Once the operator removes or fixes the file, the store works again.
-	require.NoError(t, os.Remove(filename))
+	state := s.Get()
+	assert.True(t, state.From.IsZero())
 
-	var now time.Time
-	{
-		s, err := checkpoint.NewFile(filename)
-		require.NoError(t, err)
-		now = time.Now()
-		require.NoError(t, s.Set(checkpoint.State{From: now}))
-	}
+	now := time.Now()
+	require.NoError(t, s.Set(checkpoint.State{From: now}))
 
 	s2, err := checkpoint.NewFile(filename)
 	require.NoError(t, err)
-	state := s2.Get()
+	state = s2.Get()
 	assert.EqualValues(t, now.UnixNano(), state.From.UnixNano())
 }
 

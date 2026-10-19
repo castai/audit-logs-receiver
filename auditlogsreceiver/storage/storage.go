@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"io"
 	"os"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type PollData struct {
@@ -72,7 +73,7 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 		if err != nil {
 			return nil, fmt.Errorf("saving poll data configuration file: %w", err)
 		}
-		logger.Info("new persistent storage was created", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
+		logger.Info("new persistent storage was created", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.pollData))
 
 		return &storage, nil
 	}
@@ -81,14 +82,14 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 	if err != nil {
 		return nil, fmt.Errorf("opening poll data configuration file: %w", err)
 	}
-	defer jsonFile.Close()
+	defer jsonFile.Close() //nolint best effort - implicit
 
 	byteValue, err := io.ReadAll(jsonFile)
 	if err != nil {
 		return nil, fmt.Errorf("reading poll data configuration file: %w", err)
 	}
 
-	err = json.Unmarshal(byteValue, &storage.inMemoryStorage.pollData)
+	err = json.Unmarshal(byteValue, &storage.pollData)
 	if err != nil {
 		return nil, fmt.Errorf("parsing poll data configuration file: %w", err)
 	}
@@ -99,7 +100,7 @@ func NewPersistentStorage(logger *zap.Logger, filename string) (Storage, error) 
 		return nil, fmt.Errorf("validating poll data configuration file: %w", err)
 	}
 
-	logger.Info("loaded persistent storage configuration", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.inMemoryStorage.pollData))
+	logger.Info("loaded persistent storage configuration", zap.Any("filename", storage.filename), zap.Any("poll_data", storage.pollData))
 
 	return &storage, nil
 }
@@ -111,7 +112,7 @@ func (s *persistentStorage) Get() PollData {
 func (s *persistentStorage) Save(data PollData) error {
 	s.pollData = data
 
-	jsonBytes, err := json.Marshal(&s.inMemoryStorage.pollData)
+	jsonBytes, err := json.Marshal(&s.pollData)
 	if err != nil {
 		return err
 	}
@@ -125,19 +126,19 @@ func (s *persistentStorage) Save(data PollData) error {
 }
 
 func (s *persistentStorage) validate() error {
-	if s.inMemoryStorage.pollData.NextCheckPoint != nil {
-		if s.inMemoryStorage.pollData.ToDate == nil {
+	if s.pollData.NextCheckPoint != nil {
+		if s.pollData.ToDate == nil {
 			return fmt.Errorf("to_date must be provided when next_check_point date is present")
 		}
 
-		if s.inMemoryStorage.pollData.NextCheckPoint.Before(s.inMemoryStorage.pollData.CheckPoint) {
+		if s.pollData.NextCheckPoint.Before(s.pollData.CheckPoint) {
 			return fmt.Errorf("next_check_point date must succeed check_point")
 		}
-		if s.inMemoryStorage.pollData.ToDate.Before(s.inMemoryStorage.pollData.CheckPoint) {
+		if s.pollData.ToDate.Before(s.pollData.CheckPoint) {
 			return fmt.Errorf("to_date date must succeed check_point")
 		}
 
-		if s.inMemoryStorage.pollData.NextCheckPoint.Before(*s.inMemoryStorage.pollData.ToDate) {
+		if s.pollData.NextCheckPoint.Before(*s.pollData.ToDate) {
 			return fmt.Errorf("next_check_point date must succeed or be equal to to_date")
 		}
 	}

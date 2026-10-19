@@ -49,7 +49,7 @@ func TestPersistentStorage(t *testing.T) {
 		s, err := NewPersistentStorage(logger, filename)
 		r.NoError(err)
 		defer func() {
-			os.Remove(filename)
+			os.Remove(filename) //nolint best effort - implicit
 		}()
 
 		p := s.Get()
@@ -58,6 +58,6 @@ func TestPersistentStorage(t *testing.T) {
 
 		jsonFile, err := os.Open(filename)
 		r.NoError(err)
-		defer jsonFile.Close()
+		defer jsonFile.Close() //nolint best effort - implicit
 	})
 }

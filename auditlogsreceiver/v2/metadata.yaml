@@ -3,7 +3,7 @@ type: castai_audit_logs_v2
 status:
   class: receiver
   stability:
-    alpha: [logs]
+    beta: [logs]
   distributions: [contrib]
 
 tests:

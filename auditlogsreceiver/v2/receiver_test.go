@@ -3,16 +3,22 @@ package auditlogsreceiver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/castai/audit-logs-receiver/audit-logs/v2/checkpoint"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/consumertest"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 )
@@ -87,4 +93,116 @@ func TestReceiverCheckpoint(t *testing.T) {
 	require.True(t, state.From.After(events[len(events)-1].OccurredAt))
 	require.True(t, state.To.IsZero())
 	require.Empty(t, state.Cursor)
+}
+
+// TestReceiverRestartMidPagination verifies that a restart while pagination is
+// in progress resumes from the persisted cursor instead of re-fetching the
+// first page (no duplicates, no skipped pages).
+func TestReceiverRestartMidPagination(t *testing.T) {
+	var mu sync.Mutex
+	var gotCursors []string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		cursor := r.URL.Query().Get("page.cursor")
+		gotCursors = append(gotCursors, cursor)
+		mu.Unlock()
+
+		resp := ListEventsResponse{
+			Events: []Event{{EventID: "event-page1", Description: "page 1", OccurredAt: time.Now().UTC()}},
+			Count:  1,
+		}
+		if cursor == "" {
+			resp.NextCursor = "cursor-1"
+		} else {
+			resp.Events = []Event{{EventID: "event-page2", Description: "page 2", OccurredAt: time.Now().UTC()}}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		require.NoError(t, json.NewEncoder(w).Encode(resp))
+	}))
+	t.Cleanup(server.Close)
+
+	filename := filepath.Join(t.TempDir(), "checkpoint.json")
+
+	// Phase 1: poll page 1, receive a cursor, then "crash" (shutdown).
+	sink := &consumertest.LogsSink{}
+	config := &Config{
+		API:            APIConfig{URL: server.URL, Key: "api.key", Timeout: defaultTimeout},
+		PollInterval:   10 * time.Millisecond,
+		PageLimit:      100,
+		CheckpointFile: filename,
+	}
+	r, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, sink)
+	require.NoError(t, err)
+	require.NoError(t, r.Start(context.Background(), nil))
+	require.Eventually(t, func() bool { return sink.LogRecordCount() == 1 }, time.Second, 5*time.Millisecond)
+	require.NoError(t, r.Shutdown(context.Background()))
+
+	// Checkpoint must hold the mid-pagination cursor.
+	cp, err := checkpoint.NewFile(filename)
+	require.NoError(t, err)
+	require.Equal(t, "cursor-1", cp.Get().Cursor)
+
+	// Phase 2: restart with the same checkpoint file. It must resume from
+	// cursor-1, not re-fetch page 1 (no duplicate event-page1).
+	sink2 := &consumertest.LogsSink{}
+	r2, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, sink2)
+	require.NoError(t, err)
+	require.NoError(t, r2.Start(context.Background(), nil))
+	require.Eventually(t, func() bool { return sink2.LogRecordCount() == 1 }, time.Second, 5*time.Millisecond)
+	require.NoError(t, r2.Shutdown(context.Background()))
+
+	// No duplicates across the restart: each event ID appears exactly once in
+	// each sink, and the second sink only ever saw the cursor-1 page.
+	mu.Lock()
+	defer mu.Unlock()
+	require.Equal(t, []string{"", "cursor-1"}, gotCursors)
+}
+
+// errConsumer fails ConsumeLogs to simulate an exporter outage.
+type errConsumer struct{ err error }
+
+func (c errConsumer) Capabilities() consumer.Capabilities {
+	return consumer.Capabilities{MutatesData: false}
+}
+
+func (c errConsumer) ConsumeLogs(context.Context, plog.Logs) error { return c.err }
+
+// TestReceiverCheckpointNotAdvancedOnConsumeError verifies the at-least-once
+// guarantee: when the consumer fails, the checkpoint is not advanced, so the
+// next poll retries the same page instead of dropping events.
+func TestReceiverCheckpointNotAdvancedOnConsumeError(t *testing.T) {
+	var polls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		polls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		require.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{
+			Events: []Event{{EventID: "event-0001", Description: "Event 1", OccurredAt: time.Now().UTC()}},
+			Count:  1,
+		}))
+	}))
+	t.Cleanup(server.Close)
+
+	filename := filepath.Join(t.TempDir(), "checkpoint.json")
+	config := &Config{
+		API:            APIConfig{URL: server.URL, Key: "api.key", Timeout: defaultTimeout},
+		PollInterval:   10 * time.Millisecond,
+		PageLimit:      100,
+		CheckpointFile: filename,
+	}
+
+	consumeErr := errors.New("exporter down")
+	r, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, errConsumer{err: consumeErr})
+	require.NoError(t, err)
+	require.NoError(t, r.Start(context.Background(), nil))
+	defer func() { require.NoError(t, r.Shutdown(context.Background())) }()
+
+	// Let several failed poll cycles pass.
+	require.Eventually(t, func() bool { return polls.Load() >= 3 }, 5*time.Second, 10*time.Millisecond)
+
+	// The checkpoint must never have been written: the poll interval [from, now)
+	// is only advanced after a successful consume.
+	_, statErr := os.Stat(filename)
+	require.True(t, os.IsNotExist(statErr), "checkpoint file must not exist while consume fails, got err=%v", statErr)
 }

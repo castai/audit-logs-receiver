@@ -1,9 +1,13 @@
 GOARCH := $(shell go env GOARCH)
 
+# Pin the Go toolchain so binaries pick up stdlib security fixes
+# (CVE-2026-78663 etc.). Overridable from the environment.
+export GOTOOLCHAIN ?= go1.27.2
+
 .PHONY: setup # Set up required tools (builder, mdatagen)
 setup:
 	git clone https://github.com/open-telemetry/opentelemetry-collector.git ./opentelemetry-collector
-	cd ./opentelemetry-collector && git checkout v0.147.0
+	cd ./opentelemetry-collector && git checkout v0.163.0
 	cd ./opentelemetry-collector/cmd/builder && go build -o builder .
 	cd ./opentelemetry-collector/cmd/mdatagen && go build -o mdatagen .
 

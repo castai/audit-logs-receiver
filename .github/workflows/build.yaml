@@ -29,13 +29,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup Go 1.26.1
+      - name: Setup Go 1.27.2
         uses: actions/setup-go@v5
         with:
-          go-version: 1.26.1
+          go-version: 1.27.2
 
       - name: Install dependency
-        run: go install go.opentelemetry.io/collector/cmd/builder@v0.147.0
+        run: go install go.opentelemetry.io/collector/cmd/builder@v0.163.0
 
       - name: Set build metadata
         run: |

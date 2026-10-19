@@ -69,7 +69,7 @@ func NewFile(filename string) (*File, error) {
 	}
 
 	if err := json.Unmarshal(data, &s.state); err != nil {
-		return s, nil
+		return nil, fmt.Errorf("parsing checkpoint file %s: %w", filename, err)
 	}
 
 	return s, nil

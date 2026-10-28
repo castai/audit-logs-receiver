@@ -24,6 +24,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
 
       - name: Checkout
@@ -88,6 +89,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push pr
+        id: build_pr
         if: ${{ github.event_name == 'pull_request' }}
         uses: docker/build-push-action@v6
         with:
@@ -113,6 +115,7 @@ jobs:
             index,manifest:ai.cast.image.canonical-registry=us-docker.pkg.dev/castai-hub/library
 
       - name: Build and push main
+        id: build_main
         if: github.event_name != 'release'
         uses: docker/build-push-action@v6
         with:
@@ -140,6 +143,7 @@ jobs:
             index,manifest:ai.cast.image.canonical-registry=us-docker.pkg.dev/castai-hub/library
 
       - name: Build and push release
+        id: build_release
         if: github.event_name == 'release'
         uses: docker/build-push-action@v6
         with:
@@ -167,6 +171,32 @@ jobs:
             index,manifest:org.opencontainers.image.title=audit-logs-receiver
             index,manifest:distribution-scope=public
             index,manifest:ai.cast.image.canonical-registry=us-docker.pkg.dev/castai-hub/library
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: 'v3.1.4'
+
+      - name: Sign the images (keyless)
+        env:
+          DIGEST_PR: ${{ steps.build_pr.outputs.digest }}
+          DIGEST_MAIN: ${{ steps.build_main.outputs.digest }}
+          DIGEST_RELEASE: ${{ steps.build_release.outputs.digest }}
+        run: |
+          set -euo pipefail
+          case "${GITHUB_EVENT_NAME}" in
+            release)      refs="${GAR_IMAGE}@${DIGEST_RELEASE} ${GHCR_IMAGE}@${DIGEST_RELEASE}" ;;
+            pull_request) refs="${GHCR_IMAGE}@${DIGEST_PR}" ;;
+            *)            refs="${GAR_IMAGE}@${DIGEST_MAIN} ${GHCR_IMAGE}@${DIGEST_MAIN}" ;;
+          esac
+          for ref in ${refs}; do
+            cosign sign --yes "${ref}"
+            cosign verify \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity-regexp '^https://github.com/castai/audit-logs-receiver/' \
+              "${ref}" >/dev/null
+            echo "signed and verified ${ref}"
+          done
 
       - name: Docker pull for fossa main
         if: github.event_name == 'release'

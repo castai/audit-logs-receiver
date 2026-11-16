@@ -81,11 +81,11 @@ func TestEventToLogRecordWithBody(t *testing.T) {
 	bodyB64 := base64.StdEncoding.EncodeToString([]byte(`{"changelog":[{"field":"Autoscaler.enabled"}]}`))
 
 	e := Event{
-		EventID:       "event-body-001",
-		TenantID:      "tenant-001",
-		OccurredAt:    time.Now().UTC(),
-		IngestedAt:    time.Now().UTC(),
-		Body:           bodyB64,
+		EventID:    "event-body-001",
+		TenantID:   "tenant-001",
+		OccurredAt: time.Now().UTC(),
+		IngestedAt: time.Now().UTC(),
+		Body:       bodyB64,
 	}
 
 	lr, err := e.ToLogRecord()
@@ -187,6 +187,7 @@ func TestEventToLogRecord(t *testing.T) {
 	assert.Equal(t, "prod-cluster", getAttr(t, attrs, "resource.display_name").Str())
 
 	assert.Equal(t, "tenant-001", getAttr(t, attrs, "tenant.id").Str())
+	assert.Equal(t, "tenant-001", getAttr(t, attrs, "organization.id").Str())
 	assert.Equal(t, "cluster-123", getAttr(t, attrs, "cluster.id").Str())
 
 	assert.Equal(t, ingestedAt.UTC().Format(time.RFC3339Nano), getAttr(t, attrs, "ingested_at").Str())
@@ -195,4 +196,41 @@ func TestEventToLogRecord(t *testing.T) {
 	require.Equal(t, 2, labels.Len())
 	assert.Equal(t, "prod", getAttr(t, labels, "env").Str())
 	assert.Equal(t, "us-east-1", getAttr(t, labels, "region").Str())
+}
+
+// TestEventToLogRecordOrganizationID verifies that organization.id is set per-event
+// to the event's TenantID, enabling child-org attribution in enterprise mode.
+func TestEventToLogRecordOrganizationID(t *testing.T) {
+	events := []Event{
+		{
+			EventID:    "event-child-org-1",
+			TenantID:   "org-parent",
+			OccurredAt: time.Now().UTC(),
+			IngestedAt: time.Now().UTC(),
+		},
+		{
+			EventID:    "event-child-org-2",
+			TenantID:   "org-child-a",
+			OccurredAt: time.Now().UTC(),
+			IngestedAt: time.Now().UTC(),
+		},
+		{
+			EventID:    "event-child-org-3",
+			TenantID:   "org-child-b",
+			OccurredAt: time.Now().UTC(),
+			IngestedAt: time.Now().UTC(),
+		},
+	}
+
+	for _, e := range events {
+		e := e
+		t.Run(e.EventID, func(t *testing.T) {
+			lr, err := e.ToLogRecord()
+			require.NoError(t, err)
+
+			attrs := lr.Attributes()
+			assert.Equal(t, e.TenantID, getAttr(t, attrs, "tenant.id").Str())
+			assert.Equal(t, e.TenantID, getAttr(t, attrs, "organization.id").Str())
+		})
+	}
 }

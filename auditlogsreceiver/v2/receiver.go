@@ -187,9 +187,14 @@ func CreateReceiver(_ context.Context, settings receiver.Settings, config compon
 		return nil, fmt.Errorf("creating checkpoint store: %w", err)
 	}
 
+	clientOpts := []func(*Client){WithTimeout(conf.API.Timeout)}
+	if conf.Enterprise {
+		clientOpts = append(clientOpts, WithEnterprise())
+	}
+
 	return &Receiver{
 		config:      conf,
-		lister:      NewClient(conf.API.URL, conf.API.Key, WithTimeout(conf.API.Timeout)),
+		lister:      NewClient(conf.API.URL, conf.API.Key, clientOpts...),
 		consumer:    logs,
 		checkpoint:  cp,
 		logger:      settings.Logger,

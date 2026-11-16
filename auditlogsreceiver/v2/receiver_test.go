@@ -177,6 +177,93 @@ func TestReceiverRestartMidPagination(t *testing.T) {
 	require.Equal(t, []string{"", "cursor-1"}, gotCursors)
 }
 
+// TestReceiverEnterprise verifies that when Enterprise is true the receiver
+// hits the enterprise endpoint and that each emitted log record carries the
+// correct organization.id for its producing org (child-org attribution).
+func TestReceiverEnterprise(t *testing.T) {
+	events := []Event{
+		{
+			EventID:     "event-parent",
+			TenantID:    "org-parent",
+			Description: "Parent org event",
+			OccurredAt:  time.Now().Add(-2 * time.Minute).UTC(),
+		},
+		{
+			EventID:     "event-child",
+			TenantID:    "org-child-a",
+			Description: "Child org event",
+			OccurredAt:  time.Now().Add(-time.Minute).UTC(),
+		},
+	}
+
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		require.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{
+			Events: events,
+			Count:  int32(len(events)),
+		}))
+	}))
+	t.Cleanup(server.Close)
+
+	sink := &consumertest.LogsSink{}
+	config := &Config{
+		API:          APIConfig{URL: server.URL, Key: "api.key", Timeout: defaultTimeout},
+		PollInterval: 10 * time.Millisecond,
+		PageLimit:    100,
+		Enterprise:   true,
+	}
+
+	r, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, sink)
+	require.NoError(t, err)
+
+	require.NoError(t, r.Start(context.Background(), nil))
+	require.Eventually(t, func() bool { return sink.LogRecordCount() == 2 }, time.Second, 10*time.Millisecond)
+	require.NoError(t, r.Shutdown(context.Background()))
+
+	// The mock must have received the enterprise path.
+	require.Equal(t, "/v2/audit/enterprise/events", gotPath)
+
+	// Index all emitted log records by event.id to assert per-event org attribution.
+	type recordAttrs struct {
+		orgID    string
+		tenantID string
+	}
+	byEventID := map[string]recordAttrs{}
+	for _, ld := range sink.AllLogs() {
+		for i := 0; i < ld.ResourceLogs().Len(); i++ {
+			rl := ld.ResourceLogs().At(i)
+			for j := 0; j < rl.ScopeLogs().Len(); j++ {
+				sl := rl.ScopeLogs().At(j)
+				for k := 0; k < sl.LogRecords().Len(); k++ {
+					lr := sl.LogRecords().At(k)
+					eid, ok := lr.Attributes().Get("event.id")
+					if !ok {
+						continue
+					}
+					ra := recordAttrs{}
+					if v, ok := lr.Attributes().Get("organization.id"); ok {
+						ra.orgID = v.AsString()
+					}
+					if v, ok := lr.Attributes().Get("tenant.id"); ok {
+						ra.tenantID = v.AsString()
+					}
+					byEventID[eid.AsString()] = ra
+				}
+			}
+		}
+	}
+
+	require.Contains(t, byEventID, "event-parent")
+	require.Equal(t, "org-parent", byEventID["event-parent"].orgID)
+	require.Equal(t, "org-parent", byEventID["event-parent"].tenantID)
+
+	require.Contains(t, byEventID, "event-child")
+	require.Equal(t, "org-child-a", byEventID["event-child"].orgID)
+	require.Equal(t, "org-child-a", byEventID["event-child"].tenantID)
+}
+
 // errConsumer fails ConsumeLogs to simulate an exporter outage.
 type errConsumer struct{ err error }
 

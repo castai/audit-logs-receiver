@@ -21,12 +21,13 @@ func (e *Event) ToLogRecord() (plog.LogRecord, error) {
 	r.SetObservedTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 
 	attr := map[string]any{
-		"tenant.id":      e.TenantID,
-		"event.id":       e.EventID,
-		"event.domain":   e.EventDomain,
-		"event.resource": e.EventResource,
-		"event.action":   e.EventAction,
-		"ingested_at":    e.IngestedAt.UTC().Format(time.RFC3339Nano),
+		"tenant.id":       e.TenantID,
+		"organization.id": e.TenantID,
+		"event.id":        e.EventID,
+		"event.domain":    e.EventDomain,
+		"event.resource":  e.EventResource,
+		"event.action":    e.EventAction,
+		"ingested_at":     e.IngestedAt.UTC().Format(time.RFC3339Nano),
 	}
 	if e.Body != "" {
 		attr["event.body"] = decodeEventBody(e.Body)

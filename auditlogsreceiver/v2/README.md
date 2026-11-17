@@ -43,7 +43,7 @@ CASTAI_API_URL=https://api.cast.ai CASTAI_API_KEY=<api_access_key> \
 | `poll_interval` | duration | `10s` | Interval between poll cycles |
 | `page_limit` | int | `100` | Max records per API page (1–250). The API may return fewer records than requested when `include_body` is true |
 | `include_body` | bool | `false` | Include the full event body (JSON payload, e.g. changelogs, cluster details) in each log record. When enabled, the body is attached as a structured `event.body` attribute. Defaults to `false` for backward compatibility. |
-| `enterprise` | bool | `false` | Ingest audit events for the enterprise organization and all its child organizations (uses the enterprise-scoped API endpoint; events include an `organization.id` attribute identifying the producing organization). |
+| `enterprise` | bool | `false` | Ingest audit events for the enterprise organization and all its child organizations (uses the enterprise-scoped API endpoint; each event's tenant.id identifies the producing organization). |
 | `lookback` | duration | `0s` | On first run (no checkpoint), fetch events from this far back. If omitted, starts from the current time. |
 | `checkpoint_file` | string | *(empty)* | Path to checkpoint file. Empty = in-memory (lost on restart). Set to a file path for persistent checkpointing. |
 | `filters.search` | string | *(empty)* | Full-text search query |

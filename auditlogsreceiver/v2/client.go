@@ -13,7 +13,11 @@ import (
 )
 
 const (
-	auditEventsPath           = "/v2/audit/events"
+	auditEventsPath = "/v2/audit/events"
+	// auditEventsEnterprisePath is the enterprise-scoped endpoint. It returns events for the
+	// authenticated org and all its child organizations via server-side org-tree expansion.
+	// The response shape matches /v2/audit/events; each event's tenantId identifies the org
+	// that produced it, enabling child-org attribution.
 	auditEventsEnterprisePath = "/v2/audit/enterprise/events"
 	defaultClientTimeout      = 30 * time.Second
 )

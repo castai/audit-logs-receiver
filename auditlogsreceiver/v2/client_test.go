@@ -254,8 +254,8 @@ func TestListEventsServerError(t *testing.T) {
 func TestListEventsEnterprisePath(t *testing.T) {
 	t.Run("EnterprisePathUsedWithOption", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			require.Equal(t, "/v2/audit/enterprise/events", r.URL.Path)
-			require.Equal(t, "enterprise-key", r.Header.Get("X-API-Key"))
+			assert.Equal(t, "/v2/audit/enterprise/events", r.URL.Path)
+			assert.Equal(t, "enterprise-key", r.Header.Get("X-API-Key"))
 
 			q := r.URL.Query()
 			assert.Equal(t, "50", q.Get("page.limit"))
@@ -264,7 +264,7 @@ func TestListEventsEnterprisePath(t *testing.T) {
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			require.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{}))
+			assert.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{}))
 		}))
 		t.Cleanup(ts.Close)
 
@@ -275,11 +275,11 @@ func TestListEventsEnterprisePath(t *testing.T) {
 
 	t.Run("DefaultPathWithoutOption", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			require.Equal(t, "/v2/audit/events", r.URL.Path)
+			assert.Equal(t, "/v2/audit/events", r.URL.Path)
 
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			require.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{}))
+			assert.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{}))
 		}))
 		t.Cleanup(ts.Close)
 

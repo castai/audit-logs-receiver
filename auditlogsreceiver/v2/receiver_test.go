@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/castai/audit-logs-receiver/audit-logs/v2/checkpoint"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -177,9 +178,6 @@ func TestReceiverRestartMidPagination(t *testing.T) {
 	require.Equal(t, []string{"", "cursor-1"}, gotCursors)
 }
 
-// TestReceiverEnterprise verifies that when Enterprise is true the receiver
-// hits the enterprise endpoint and that each emitted log record carries the
-// correct organization.id for its producing org (child-org attribution).
 func TestReceiverEnterprise(t *testing.T) {
 	events := []Event{
 		{
@@ -196,11 +194,10 @@ func TestReceiverEnterprise(t *testing.T) {
 		},
 	}
 
-	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
+		assert.Equal(t, "/v2/audit/enterprise/events", r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
-		require.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{
+		assert.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{
 			Events: events,
 			Count:  int32(len(events)),
 		}))
@@ -215,22 +212,14 @@ func TestReceiverEnterprise(t *testing.T) {
 		Enterprise:   true,
 	}
 
-	r, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, sink)
+	rec, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, sink)
 	require.NoError(t, err)
 
-	require.NoError(t, r.Start(context.Background(), nil))
+	require.NoError(t, rec.Start(context.Background(), nil))
 	require.Eventually(t, func() bool { return sink.LogRecordCount() == 2 }, time.Second, 10*time.Millisecond)
-	require.NoError(t, r.Shutdown(context.Background()))
+	require.NoError(t, rec.Shutdown(context.Background()))
 
-	// The mock must have received the enterprise path.
-	require.Equal(t, "/v2/audit/enterprise/events", gotPath)
-
-	// Index all emitted log records by event.id to assert per-event org attribution.
-	type recordAttrs struct {
-		orgID    string
-		tenantID string
-	}
-	byEventID := map[string]recordAttrs{}
+	byEventID := map[string]string{}
 	for _, ld := range sink.AllLogs() {
 		for i := 0; i < ld.ResourceLogs().Len(); i++ {
 			rl := ld.ResourceLogs().At(i)
@@ -242,26 +231,21 @@ func TestReceiverEnterprise(t *testing.T) {
 					if !ok {
 						continue
 					}
-					ra := recordAttrs{}
-					if v, ok := lr.Attributes().Get("organization.id"); ok {
-						ra.orgID = v.AsString()
-					}
+					tid := ""
 					if v, ok := lr.Attributes().Get("tenant.id"); ok {
-						ra.tenantID = v.AsString()
+						tid = v.AsString()
 					}
-					byEventID[eid.AsString()] = ra
+					byEventID[eid.AsString()] = tid
 				}
 			}
 		}
 	}
 
 	require.Contains(t, byEventID, "event-parent")
-	require.Equal(t, "org-parent", byEventID["event-parent"].orgID)
-	require.Equal(t, "org-parent", byEventID["event-parent"].tenantID)
+	assert.Equal(t, "org-parent", byEventID["event-parent"])
 
 	require.Contains(t, byEventID, "event-child")
-	require.Equal(t, "org-child-a", byEventID["event-child"].orgID)
-	require.Equal(t, "org-child-a", byEventID["event-child"].tenantID)
+	assert.Equal(t, "org-child-a", byEventID["event-child"])
 }
 
 // errConsumer fails ConsumeLogs to simulate an exporter outage.

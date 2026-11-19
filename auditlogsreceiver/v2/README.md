@@ -110,6 +110,13 @@ Notes:
 - The `enterprise` flag is available only in the v2 receiver.
 - Using `enterprise: true` with an API key that belongs to a regular (non-enterprise) organization is harmless: the API simply returns that organization's own events, and no client-side entitlement validation is performed.
 
+#### Switching `enterprise` on or off
+
+The checkpoint is time-based and shared by both endpoints, so toggling `enterprise` while keeping the same `checkpoint_file` preserves the polling position — the receiver continues from where it left off. Keep in mind:
+
+- Events from the currently open polling window may be re-emitted once after the switch (the receiver is at-least-once).
+- Events from child organizations that occurred before the switch are not backfilled. To re-ingest a window of history after enabling `enterprise`, set `lookback` or delete the checkpoint file and restart.
+
 ### Attribute mapping
 
 Each v2 audit event is mapped to an OpenTelemetry log record as follows:

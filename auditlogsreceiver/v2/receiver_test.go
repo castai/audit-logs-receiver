@@ -216,9 +216,21 @@ func TestReceiverEnterprise(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, rec.Start(context.Background(), nil))
-	require.Eventually(t, func() bool { return sink.LogRecordCount() == 2 }, time.Second, 10*time.Millisecond)
+	require.Eventually(t, func() bool { return len(collectedEventIDs(sink)) >= 2 }, time.Second, 10*time.Millisecond)
 	require.NoError(t, rec.Shutdown(context.Background()))
 
+	byEventID := collectedEventIDs(sink)
+
+	require.Contains(t, byEventID, "event-parent")
+	assert.Equal(t, "org-parent", byEventID["event-parent"])
+
+	require.Contains(t, byEventID, "event-child")
+	assert.Equal(t, "org-child-a", byEventID["event-child"])
+}
+
+// collectedEventIDs indexes emitted log records by event.id, collapsing
+// duplicates from re-polls.
+func collectedEventIDs(sink *consumertest.LogsSink) map[string]string {
 	byEventID := map[string]string{}
 	for _, ld := range sink.AllLogs() {
 		for i := 0; i < ld.ResourceLogs().Len(); i++ {
@@ -240,12 +252,7 @@ func TestReceiverEnterprise(t *testing.T) {
 			}
 		}
 	}
-
-	require.Contains(t, byEventID, "event-parent")
-	assert.Equal(t, "org-parent", byEventID["event-parent"])
-
-	require.Contains(t, byEventID, "event-child")
-	assert.Equal(t, "org-child-a", byEventID["event-child"])
+	return byEventID
 }
 
 // errConsumer fails ConsumeLogs to simulate an exporter outage.

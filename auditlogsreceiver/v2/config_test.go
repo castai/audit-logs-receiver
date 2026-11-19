@@ -29,6 +29,17 @@ func TestConfigValidate(t *testing.T) {
 		require.NoError(t, config.Validate())
 	})
 
+	t.Run("OKWithEnterprise", func(t *testing.T) {
+		config := &Config{
+			API:          APIConfig{URL: "https://api.cast.ai", Key: "foobar", Timeout: defaultTimeout},
+			PollInterval: defaultPollInterval,
+			PageLimit:    defaultPageLimit,
+			Enterprise:   true,
+		}
+
+		require.NoError(t, config.Validate())
+	})
+
 	t.Run("Error", func(t *testing.T) {
 		tests := map[string]struct {
 			config  *Config

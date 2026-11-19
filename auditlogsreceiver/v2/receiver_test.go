@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/castai/audit-logs-receiver/audit-logs/v2/checkpoint"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -175,6 +176,182 @@ func TestReceiverRestartMidPagination(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	require.Equal(t, []string{"", "cursor-1"}, gotCursors)
+}
+
+func TestReceiverEnterprise(t *testing.T) {
+	events := []Event{
+		{
+			EventID:     "event-parent",
+			TenantID:    "org-parent",
+			Description: "Parent org event",
+			OccurredAt:  time.Now().Add(-2 * time.Minute).UTC(),
+		},
+		{
+			EventID:     "event-child",
+			TenantID:    "org-child-a",
+			Description: "Child org event",
+			OccurredAt:  time.Now().Add(-time.Minute).UTC(),
+		},
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v2/audit/enterprise/events", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		assert.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{
+			Events: events,
+			Count:  int32(len(events)),
+		}))
+	}))
+	t.Cleanup(server.Close)
+
+	sink := &consumertest.LogsSink{}
+	config := &Config{
+		API:          APIConfig{URL: server.URL, Key: "api.key", Timeout: defaultTimeout},
+		PollInterval: 10 * time.Millisecond,
+		PageLimit:    100,
+		Lookback:     5 * time.Minute,
+		Enterprise:   true,
+	}
+
+	rec, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, config, sink)
+	require.NoError(t, err)
+
+	require.NoError(t, rec.Start(context.Background(), nil))
+	require.Eventually(t, func() bool { return len(collectedEventIDs(sink)) >= 2 }, time.Second, 10*time.Millisecond)
+	require.NoError(t, rec.Shutdown(context.Background()))
+
+	byEventID := collectedEventIDs(sink)
+
+	require.Contains(t, byEventID, "event-parent")
+	assert.Equal(t, "org-parent", byEventID["event-parent"])
+
+	require.Contains(t, byEventID, "event-child")
+	assert.Equal(t, "org-child-a", byEventID["event-child"])
+}
+
+func TestReceiverEnterpriseModeSwitch(t *testing.T) {
+	events := []Event{
+		{
+			EventID:     "event-parent",
+			TenantID:    "org-parent",
+			Description: "Parent org event",
+			OccurredAt:  time.Now().Add(-2 * time.Minute).UTC(),
+		},
+		{
+			EventID:     "event-child",
+			TenantID:    "org-child-a",
+			Description: "Child org event",
+			OccurredAt:  time.Now().Add(-time.Minute).UTC(),
+		},
+	}
+
+	var mu sync.Mutex
+	var gotFroms []string
+
+	var wantPath atomic.Value
+	wantPath.Store("/v2/audit/events")
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, wantPath.Load(), r.URL.Path)
+
+		q := r.URL.Query()
+		mu.Lock()
+		gotFroms = append(gotFroms, q.Get("fromDate"))
+		mu.Unlock()
+
+		inWindow := []Event{}
+		if from, err := time.Parse(time.RFC3339Nano, q.Get("fromDate")); err == nil {
+			for _, ev := range events {
+				if !ev.OccurredAt.Before(from) {
+					inWindow = append(inWindow, ev)
+				}
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		assert.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{
+			Events: inWindow,
+			Count:  int32(len(inWindow)),
+		}))
+	}))
+	t.Cleanup(server.Close)
+
+	cpFile := filepath.Join(t.TempDir(), "checkpoint.json")
+
+	sink1 := &consumertest.LogsSink{}
+	rec, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, &Config{
+		API:            APIConfig{URL: server.URL, Key: "api.key", Timeout: defaultTimeout},
+		PollInterval:   10 * time.Millisecond,
+		PageLimit:      100,
+		Lookback:       5 * time.Minute,
+		CheckpointFile: cpFile,
+	}, sink1)
+	require.NoError(t, err)
+
+	require.NoError(t, rec.Start(context.Background(), nil))
+	require.Eventually(t, func() bool { return len(collectedEventIDs(sink1)) >= 2 }, time.Second, 10*time.Millisecond)
+	require.NoError(t, rec.Shutdown(context.Background()))
+
+	mu.Lock()
+	phase1 := len(gotFroms)
+	mu.Unlock()
+
+	wantPath.Store("/v2/audit/enterprise/events")
+	sink2 := &consumertest.LogsSink{}
+	rec2, err := CreateReceiver(t.Context(), receiver.Settings{TelemetrySettings: component.TelemetrySettings{Logger: zap.NewNop()}}, &Config{
+		API:            APIConfig{URL: server.URL, Key: "api.key", Timeout: defaultTimeout},
+		PollInterval:   10 * time.Millisecond,
+		PageLimit:      100,
+		Lookback:       5 * time.Minute,
+		CheckpointFile: cpFile,
+		Enterprise:     true,
+	}, sink2)
+	require.NoError(t, err)
+
+	require.NoError(t, rec2.Start(context.Background(), nil))
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return len(gotFroms) >= phase1+2
+	}, time.Second, 10*time.Millisecond)
+	require.NoError(t, rec2.Shutdown(context.Background()))
+
+	assert.Empty(t, collectedEventIDs(sink2))
+
+	mu.Lock()
+	phase2Froms := append([]string(nil), gotFroms[phase1:]...)
+	mu.Unlock()
+	for _, from := range phase2Froms {
+		parsed, err := time.Parse(time.RFC3339Nano, from)
+		require.NoError(t, err)
+		assert.True(t, parsed.After(events[1].OccurredAt), "fromDate %s should resume from the stored position", from)
+	}
+}
+
+// collectedEventIDs indexes emitted log records by event.id, collapsing
+// duplicates from re-polls.
+func collectedEventIDs(sink *consumertest.LogsSink) map[string]string {
+	byEventID := map[string]string{}
+	for _, ld := range sink.AllLogs() {
+		for i := 0; i < ld.ResourceLogs().Len(); i++ {
+			rl := ld.ResourceLogs().At(i)
+			for j := 0; j < rl.ScopeLogs().Len(); j++ {
+				sl := rl.ScopeLogs().At(j)
+				for k := 0; k < sl.LogRecords().Len(); k++ {
+					lr := sl.LogRecords().At(k)
+					eid, ok := lr.Attributes().Get("event.id")
+					if !ok {
+						continue
+					}
+					tid := ""
+					if v, ok := lr.Attributes().Get("tenant.id"); ok {
+						tid = v.AsString()
+					}
+					byEventID[eid.AsString()] = tid
+				}
+			}
+		}
+	}
+	return byEventID
 }
 
 // errConsumer fails ConsumeLogs to simulate an exporter outage.

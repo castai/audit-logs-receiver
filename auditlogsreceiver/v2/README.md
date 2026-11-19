@@ -43,6 +43,7 @@ CASTAI_API_URL=https://api.cast.ai CASTAI_API_KEY=<api_access_key> \
 | `poll_interval` | duration | `10s` | Interval between poll cycles |
 | `page_limit` | int | `100` | Max records per API page (1–250). The API may return fewer records than requested when `include_body` is true |
 | `include_body` | bool | `false` | Include the full event body (JSON payload, e.g. changelogs, cluster details) in each log record. When enabled, the body is attached as a structured `event.body` attribute. Defaults to `false` for backward compatibility. |
+| `enterprise` | bool | `false` | Ingest audit events for the enterprise organization and all its child organizations (uses the enterprise-scoped API endpoint; each event's tenant.id identifies the producing organization). |
 | `lookback` | duration | `0s` | On first run (no checkpoint), fetch events from this far back. If omitted, starts from the current time. |
 | `checkpoint_file` | string | *(empty)* | Path to checkpoint file. Empty = in-memory (lost on restart). Set to a file path for persistent checkpointing. |
 | `filters.search` | string | *(empty)* | Full-text search query |
@@ -81,6 +82,40 @@ service:
       receivers: [castai_audit_logs_v2]
       exporters: [debug]
 ```
+
+### Enterprise organizations
+
+Enterprise customers with a parent organization and multiple child organizations can ingest audit events for the entire org tree with a single receiver instance and a single API key. Set `enterprise: true` and use an API key that belongs to the enterprise (parent) organization:
+
+```yaml
+receivers:
+  castai_audit_logs_v2:
+    api:
+      url: ${env:CASTAI_API_URL}
+      key: ${env:CASTAI_API_KEY}   # API key of the enterprise (parent) org
+    enterprise: true
+    checkpoint_file: ./audit_logs_v2_checkpoint.json
+    lookback: 1h
+```
+
+How it works:
+
+- The receiver polls the enterprise-scoped API endpoint (`GET /v2/audit/enterprise/events`) instead of the default one. The CAST AI API expands the organization tree server-side and returns a single merged, cursor-paginated stream covering the enterprise organization and all of its child organizations.
+- The receiver stays a single-stream poller: no per-child-org configuration, API keys, or cursors are needed, and no org discovery happens client-side.
+- Each event's `tenant.id` attribute identifies the organization that produced it — the parent or any child org — so downstream consumers can attribute every event to a specific organization.
+- All other configuration (filters, checkpointing, lookback, `include_body`) applies to the merged stream exactly as in single-tenant mode.
+
+Notes:
+
+- The `enterprise` flag is available only in the v2 receiver.
+- Using `enterprise: true` with an API key that belongs to a regular (non-enterprise) organization is harmless: the API simply returns that organization's own events, and no client-side entitlement validation is performed.
+
+#### Switching `enterprise` on or off
+
+The checkpoint is time-based and shared by both endpoints, so toggling `enterprise` while keeping the same `checkpoint_file` preserves the polling position — the receiver continues from where it left off. Keep in mind:
+
+- Events from the currently open polling window may be re-emitted once after the switch (the receiver is at-least-once).
+- Events from child organizations that occurred before the switch are not backfilled. To re-ingest a window of history after enabling `enterprise`, set `lookback` or delete the checkpoint file and restart.
 
 ### Attribute mapping
 

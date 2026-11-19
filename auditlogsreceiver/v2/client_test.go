@@ -251,6 +251,44 @@ func TestListEventsServerError(t *testing.T) {
 	require.ErrorContains(t, err, "unexpected status code")
 }
 
+func TestListEventsEnterprisePath(t *testing.T) {
+	t.Run("EnterprisePathUsedWithOption", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/v2/audit/enterprise/events", r.URL.Path)
+			assert.Equal(t, "enterprise-key", r.Header.Get("X-API-Key"))
+
+			q := r.URL.Query()
+			assert.Equal(t, "50", q.Get("page.limit"))
+			assert.Equal(t, "occurred_at", q.Get("sort.field"))
+			assert.Equal(t, "ASC", q.Get("sort.order"))
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			assert.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{}))
+		}))
+		t.Cleanup(ts.Close)
+
+		c := NewClient(ts.URL, "enterprise-key", WithEnterprise())
+		_, err := c.ListEvents(context.Background(), ListEventsParams{PageLimit: 50})
+		require.NoError(t, err)
+	})
+
+	t.Run("DefaultPathWithoutOption", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/v2/audit/events", r.URL.Path)
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			assert.NoError(t, json.NewEncoder(w).Encode(ListEventsResponse{}))
+		}))
+		t.Cleanup(ts.Close)
+
+		c := NewClient(ts.URL, "test-key")
+		_, err := c.ListEvents(context.Background(), ListEventsParams{PageLimit: 50})
+		require.NoError(t, err)
+	})
+}
+
 func TestListEventsTimeout(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(50 * time.Millisecond)

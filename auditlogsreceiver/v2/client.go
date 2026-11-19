@@ -13,8 +13,13 @@ import (
 )
 
 const (
-	auditEventsPath      = "/v2/audit/events"
-	defaultClientTimeout = 30 * time.Second
+	auditEventsPath = "/v2/audit/events"
+	// auditEventsEnterprisePath is the enterprise-scoped endpoint. It returns events for the
+	// authenticated org and all its child organizations via server-side org-tree expansion.
+	// The response shape matches /v2/audit/events; each event's tenantId identifies the org
+	// that produced it, enabling child-org attribution.
+	auditEventsEnterprisePath = "/v2/audit/enterprise/events"
+	defaultClientTimeout      = 30 * time.Second
 )
 
 // Client is an HTTP client for the CAST AI Audit v2 API.
@@ -22,6 +27,7 @@ type Client struct {
 	httpClient *http.Client
 	baseURL    string
 	apiKey     string
+	enterprise bool
 }
 
 // WithTimeout sets the HTTP client timeout.
@@ -35,6 +41,14 @@ func WithTimeout(d time.Duration) func(*Client) {
 func WithHTTPClient(h *http.Client) func(*Client) {
 	return func(c *Client) {
 		c.httpClient = h
+	}
+}
+
+// WithEnterprise configures the client to use the enterprise audit events
+// endpoint, which returns events for the authenticated org and all its child orgs.
+func WithEnterprise() func(*Client) {
+	return func(c *Client) {
+		c.enterprise = true
 	}
 }
 
@@ -111,17 +125,21 @@ type Filters struct {
 
 // ListEventsParams defines the parameters for listing audit events.
 type ListEventsParams struct {
-	PageLimit    int
-	PageCursor   string
-	FromDate     time.Time
-	ToDate       time.Time
-	Filters      Filters
-	IncludeBody  bool
+	PageLimit   int
+	PageCursor  string
+	FromDate    time.Time
+	ToDate      time.Time
+	Filters     Filters
+	IncludeBody bool
 }
 
 // ListEvents retrieves audit events from the v2 API.
 func (c *Client) ListEvents(ctx context.Context, params ListEventsParams) (*ListEventsResponse, error) {
-	reqURL := c.baseURL + auditEventsPath
+	path := auditEventsPath
+	if c.enterprise {
+		path = auditEventsEnterprisePath
+	}
+	reqURL := c.baseURL + path
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {

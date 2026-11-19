@@ -81,11 +81,11 @@ func TestEventToLogRecordWithBody(t *testing.T) {
 	bodyB64 := base64.StdEncoding.EncodeToString([]byte(`{"changelog":[{"field":"Autoscaler.enabled"}]}`))
 
 	e := Event{
-		EventID:       "event-body-001",
-		TenantID:      "tenant-001",
-		OccurredAt:    time.Now().UTC(),
-		IngestedAt:    time.Now().UTC(),
-		Body:           bodyB64,
+		EventID:    "event-body-001",
+		TenantID:   "tenant-001",
+		OccurredAt: time.Now().UTC(),
+		IngestedAt: time.Now().UTC(),
+		Body:       bodyB64,
 	}
 
 	lr, err := e.ToLogRecord()

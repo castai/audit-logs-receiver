@@ -83,6 +83,33 @@ service:
       exporters: [debug]
 ```
 
+### Enterprise organizations
+
+Enterprise customers with a parent organization and multiple child organizations can ingest audit events for the entire org tree with a single receiver instance and a single API key. Set `enterprise: true` and use an API key that belongs to the enterprise (parent) organization:
+
+```yaml
+receivers:
+  castai_audit_logs_v2:
+    api:
+      url: ${env:CASTAI_API_URL}
+      key: ${env:CASTAI_API_KEY}   # API key of the enterprise (parent) org
+    enterprise: true
+    checkpoint_file: ./audit_logs_v2_checkpoint.json
+    lookback: 1h
+```
+
+How it works:
+
+- The receiver polls the enterprise-scoped API endpoint (`GET /v2/audit/enterprise/events`) instead of the default one. The CAST AI API expands the organization tree server-side and returns a single merged, cursor-paginated stream covering the enterprise organization and all of its child organizations.
+- The receiver stays a single-stream poller: no per-child-org configuration, API keys, or cursors are needed, and no org discovery happens client-side.
+- Each event's `tenant.id` attribute identifies the organization that produced it — the parent or any child org — so downstream consumers can attribute every event to a specific organization.
+- All other configuration (filters, checkpointing, lookback, `include_body`) applies to the merged stream exactly as in single-tenant mode.
+
+Notes:
+
+- The `enterprise` flag is available only in the v2 receiver.
+- Using `enterprise: true` with an API key that belongs to a regular (non-enterprise) organization is harmless: the API simply returns that organization's own events, and no client-side entitlement validation is performed.
+
 ### Attribute mapping
 
 Each v2 audit event is mapped to an OpenTelemetry log record as follows:
